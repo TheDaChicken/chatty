@@ -13,9 +13,9 @@ import java.util.HashMap;
 import java.util.logging.Logger;
 
 /**
- * Handles TwitchApi requests and responses.
+ * Handles YouTubeAPI requests and responses.
  * 
- * @author tduva
+ * @author TheDaChicken
  */
 public class YouTubeApi {
 
