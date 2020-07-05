@@ -188,7 +188,7 @@ public abstract class YouTubeLiveChat {
             YouTubeChannelRunnable channelRunnable = new YouTubeChannelRunnable(this, api);
             onJoinAttempt(channel_identifier);
             int result = channelRunnable.loadInformation(channel_identifier);
-            if(result < 0) {
+            if(result == 0) {
                 new Thread(channelRunnable).start();
                 onJoin(channel_identifier, channel_identifier, "[ME]");
             } else {

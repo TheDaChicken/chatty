@@ -1476,12 +1476,8 @@ public class MainGui extends JFrame implements Runnable {
                             highlighter.getLastMatchNoSound(),
                             isOwnMessage, whisper, bitsAmount > 0);
                 } else if (!ignored) {
-                    if (whisper) {
-                        notificationManager.whisper(user, localUser, text, isOwnMessage);
-                    } else {
-                        notificationManager.message(user, localUser, text, tags, isOwnMessage,
-                                bitsAmount > 0);
-                    }
+                    notificationManager.message(user, localUser, text, tags, isOwnMessage,
+                            bitsAmount > 0);
                     if (!isOwnMessage) {
                         channels.setChannelNewMessage(chan);
                     }
