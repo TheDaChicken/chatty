@@ -1,25 +1,30 @@
-Chatty
+
+YouTube Chatty
 ======
 
-Chatty is a Twitch Chat Client for Desktop written in Java featuring many
-Twitch specific features.
+YouTube Chatty is Chatty (which is a Twitch Chat Client) for YouTube. [Chatty's description](https://github.com/chatty/chatty#chatty)
 
-* Website: https://chatty.github.io
-* E-Mail: chattyclient@gmail.com
-* Twitter: @ChattyClient (https://twitter.com/ChattyClient)
-* YouTube: https://www.youtube.com/user/chattyclient
-* Discord: https://discord.gg/WTuqGeJ
+This isn't supposed to be any professional program to use. 
+YouTube Live Chat is horrible. It's really bad for modding etc.
+This was specifically made to combat the regular YouTube Live Chat.
 
-I learned about most of the Java techniques and APIs used in this during
-development, so many things won't be designed ideally. I also never
-released such a project as opensource before, so if I missed anything or
-didn't adhere to some license correctly, please tell me.
+This goes the same with the original owner of Chatty,
+please let me know if I missed anything.
+
+NOTE
+========
+This is currectly not fully done for basic use. I am putting this on github before I am fully done with it.
+There is some stuff that isn't needed anymore like Websocket library, those will be removed later.
+Plus the code has workarounds for this to work from the original code, that needs to be removed.
+I am working on at least getting it fully working. 
 
 Download
 ========
 
-Go to the [website](https://chatty.github.io) for ready to use downloads
-and more information on the features.
+There is no releases yet.
+
+Chatty Information
+=====================
 
 Contributions
 =============
@@ -116,6 +121,11 @@ External Libraries
   * License: "Apache License 2.0"
 	(for the license text see the APACHE_LICENSE file
 	or <http://www.apache.org/licenses/LICENSE-2.0>).
+
+* Google API Client Library
+  * From Internet* (maybe later added as a file under `assets/` etc)
+  * Website: <https://developers.google.com/api-client-library/java>
+  * License: ¯\\_(ツ)\_/¯ (I don't think there is any)
 
 * Additional external/modified libraries integrated under `src/chatty/` have license/source
   information in the file header
