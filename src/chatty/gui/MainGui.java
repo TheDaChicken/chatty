@@ -1434,7 +1434,6 @@ public class MainGui extends JFrame implements Runnable {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                System.out.print("asfasfasf\n ");
                 Channel chan;
                 String channel = user.getChannel();
                 boolean whisper = false;
