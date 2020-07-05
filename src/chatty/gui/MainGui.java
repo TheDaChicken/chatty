@@ -1529,7 +1529,6 @@ public class MainGui extends JFrame implements Runnable {
                         }
                     }
 
-                    message.whisper = whisper;
                     message.action = action;
                     if (highlighted || hlByPoints) {
                         // Only set message.highlighted instead of highlighted

@@ -74,11 +74,14 @@ public class YouTubeChannelRunnable implements Runnable {
                 for (int i = 0; i < messages.size(); i++) {
                     LiveChatMessage message = messages.get(i);
                     LiveChatMessageSnippet snippet = message.getSnippet();
+
+                    String user_username = message.getAuthorDetails().getDisplayName();
+                    String user_channel_id = message.getAuthorDetails().getChannelId();
+
                     Map<String, String> tags_map = new HashMap<>();
                     tags_map.put("id", message.getId());
                     MsgTags tags = new MsgTags(tags_map);
-                    handler.onChannelMessage(channel_id, message.getAuthorDetails().getDisplayName(),
-                            message.getAuthorDetails().getChannelId(), snippet.getDisplayMessage(), tags, false);
+                    handler.onChannelMessage(channel_id, user_channel_id, user_username, snippet.getDisplayMessage(), tags, false);
                 }
 
                 TimeUnit.MILLISECONDS.sleep(response.getPollingIntervalMillis());

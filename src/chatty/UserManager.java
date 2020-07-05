@@ -142,7 +142,6 @@ public class UserManager {
      * @return The List of User-objects.
      */
     public synchronized List<User> getUsersByName(String name) {
-        name = StringUtil.toLowerCase(name);
         List<User> result = new ArrayList<>();
         Iterator<HashMap<String, User>> it = users.values().iterator();
         while (it.hasNext()) {
@@ -163,8 +162,8 @@ public class UserManager {
      * @param name
      * @return The {@code User} object or null if none exists
      */
-    public synchronized User getUserIfExists(String channel, String name) {
-        return getUsersByChannel(channel).get(name);
+    public synchronized User getUserIfExists(String channel, String channel_id) {
+        return getUsersByChannel(channel).get(channel_id);
     }
     
     /**
@@ -198,8 +197,8 @@ public class UserManager {
                  * command which may not be send after every join or sent
                  * message.
                  */
-                user.setStaff(specialUser.isStaff());
-                user.setId(specialUser.getId());
+                //user.setStaff(specialUser.isStaff());
+                user.setId(channel_id);
                 user.setLocalUser(true);
                 if (!specialUser.hasDefaultColor()) {
                     user.setColor(specialUser.getPlainColor());

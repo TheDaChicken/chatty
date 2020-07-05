@@ -105,8 +105,8 @@ public class YouTubeConnection {
         return users.getUser(rooms.getRoom(channel), channel_id, name);
     }
 
-    public User getExistingUser(String channel, String name) {
-        return users.getUserIfExists(channel, name);
+    public User getExistingUser(String channel, String channel_id) {
+        return users.getUserIfExists(channel, channel_id);
     }
 
     /**

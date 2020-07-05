@@ -274,8 +274,12 @@ public class YouTubeClient {
         return null;
     }
 
-    public User getLocalUser(String username) {
-        return null;
+    public User getExistingUser(String channel, String name) {
+        return c.getExistingUser(channel, name);
+    }
+
+    public User getLocalUser(String channel) {
+        return c.getExistingUser(channel, c.getChannelID());
     }
 
     /**
