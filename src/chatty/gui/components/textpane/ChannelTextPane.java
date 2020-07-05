@@ -31,6 +31,7 @@ import chatty.util.api.Emoticon.EmoticonImage;
 import chatty.util.api.Emoticon.EmoticonUser;
 import chatty.util.api.Emoticons;
 import chatty.util.api.Emoticons.TagEmotes;
+import chatty.util.api.pubsub.ModeratorActionData;
 import chatty.util.colors.ColorCorrectionNew;
 import chatty.util.colors.ColorCorrector;
 import java.awt.*;
@@ -483,7 +484,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         userStyle.addAttribute(Attribute.ID_AUTOMOD, message.msgId);
         // Should be the same as the start of the "text" in the AutoModMessage,
         // so highlight matches are displayed properly
-        String startText = "[AutoMod] <"+message.user.getRegularDisplayNick()+">";
+        String startText = "[AutoMod] <"+message.user.getName()+">";
         print(startText, userStyle);
         printSpecialsInfo(" "+message.message, style,
                 Match.shiftMatchList(message.highlightMatches, -startText.length()));
@@ -529,7 +530,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             style = styles.standard(color);
         }
         printTimestamp(style);
-        printUser(user, action, message.id, background, message.pointsHl);
+        printUser(user, action, message.whisper, message.id, background, message.pointsHl);
         
         // Change style for text if /me and no highlight (if enabled)
         if (!highlighted && color == null && action && styles.isEnabled(Setting.ACTION_COLORED)) {
@@ -721,9 +722,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                         changeInfo(line, attr -> {
                             String existing = (String) attr.getAttribute(Attribute.AUTOMOD_ACTION);
                             String action = "approved";
-                            //if (info.data.type == ModeratorActionData.Type.AUTOMOD_DENIED) {
-                            //    action = "denied";
-                            //}
+                            if (info.data.type == ModeratorActionData.Type.AUTOMOD_DENIED) {
+                                action = "denied";
+                            }
                             /**
                              * Usually there should only be one mod approving/
                              * denying a particular message, but just in case
@@ -1056,7 +1057,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 }
                 if (first) {
                     setBanInfo(l.line, banInfo);
-                    //setLineCommand(l.line.getStartOffset(), Helper.makeBanCommand(user, duration, targetMsgId));
+                    setLineCommand(l.line.getStartOffset(), "");
                     replayModLogInfo();
                     first = false;
                 }
@@ -1797,18 +1798,17 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * Outputs a clickable and colored nickname.
      * 
      * @param user
-     * @param action
+     * @param action 
+     * @param whisper 
      * @param msgId 
      */
-    private void printUser(User user, boolean action, String msgId, Color background, boolean pointsHl) {
+    private void printUser(User user, boolean action,
+            boolean whisper, String msgId, Color background, boolean pointsHl) {
         
         // Decide on name based on settings and available names
         String userName;
         if (user.hasCustomNickSet()) {
             userName = user.getCustomNick();
-        }
-        else if (styles.namesMode() == SettingsManager.DISPLAY_NAMES_MODE_USERNAME) {
-            userName = user.getName();
         }
         else {
             userName = user.getName();
@@ -1829,7 +1829,13 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             printRainbowUser(user, userName, action, SpecialColor.GOLD, msgId);
         } else {
             MutableAttributeSet style = styles.messageUser(user, msgId, background);
-            if (action) {
+            if (whisper) {
+                if (action) {
+                    print(">>["+userName + "]", style);
+                } else {
+                    print("-["+userName + "]-", style);
+                }
+            } else if (action) {
                 print("* " + userName, style);
             } else {
                 print(userName, style);
@@ -1839,7 +1845,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         // Finish up
         // Requires user style because it needs the metadata to detect the end
         // of the nick when deleting messages (and possibly other stuff)
-        if (!action) {
+        if (!action && !whisper) {
             print(":", styles.messageUser(user, msgId, background));
         } else {
             //print(" ", styles.messageUser(user));
@@ -2163,9 +2169,6 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         
         if (styles.isEnabled(Setting.EMOTICONS_ENABLED)) {
             findEmoticons(text, user, ranges, rangesStyle, emotes);
-            //if (containsBits) {
-            //    //findBits(main.emoticons.getCheerEmotes(), text, ranges, rangesStyle, user);
-            //}
         }
         
         if (styles.isEnabled(Setting.MENTIONS)) {

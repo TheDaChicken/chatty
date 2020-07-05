@@ -12,7 +12,6 @@ import chatty.util.Pair;
 import chatty.util.StringUtil;
 import chatty.util.api.usericons.BadgeType;
 import chatty.util.irc.MsgTags;
-
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -90,12 +89,12 @@ public class Highlighter {
      * 
      * @param username 
      */
-    public void setChannelID(String channel_id) {
-        if (channel_id == null) {
+    public void setUsername(String username) {
+        if (username == null) {
             usernameItem = null;
         }
         else {
-            HighlightItem newItem = new HighlightItem("w:"+channel_id);
+            HighlightItem newItem = new HighlightItem("w:"+username);
             if (!newItem.hasError()) {
                 usernameItem = newItem;
             } else {
@@ -472,6 +471,7 @@ public class Highlighter {
          */
         private void prepare(String item) {
             item = item.trim();
+            LOGGER.info(item);
             if (!findPatternPrefixAndCompile(item)) {
                 // If not a text matching prefix, search for other prefixes
                 

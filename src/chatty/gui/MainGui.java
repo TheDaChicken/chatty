@@ -398,8 +398,6 @@ public class MainGui extends JFrame implements Runnable {
             setExtendedState(MAXIMIZED_BOTH);
         }
 
-        updateHighlight();
-
         String tokens = client.settings.getString("tokens");
         client.api.setGoogleCredential(YouTubeAuth.getJsonCredentials(tokens));
         //if (client.settings.getList("scopes").isEmpty()) {
@@ -438,34 +436,6 @@ public class MainGui extends JFrame implements Runnable {
      */
     private void loadMenuSetting(String name) {
         menu.setItemState(name,client.settings.getBoolean(name));
-    }
-
-    /**
-     * Tells the highlighter the current list of highlight-items from the settings.
-     */
-    private void updateHighlight() {
-        highlighter.update(StringUtil.getStringList(client.settings.getList("highlight")));
-        highlighter.updateBlacklist(StringUtil.getStringList(client.settings.getList("highlightBlacklist")));
-    }
-
-    private void updateIgnore() {
-        ignoreList.update(StringUtil.getStringList(client.settings.getList("ignore")));
-    }
-
-    private void updateFilter() {
-        filter.update(StringUtil.getStringList(client.settings.getList("filter")));
-    }
-
-    /**
-     * Tells the highlighter the current username and whether it should be used
-     * for highlight. Used to initialize on connect, when the username is fixed
-     * for the duration of the connection.
-     *
-     * @param username The current username.
-     */
-    public void updateHighlightSetUsername(String channel_id) {
-        highlighter.setChannelID(channel_id);
-        highlighter.setHighlightUsername(client.settings.getBoolean("highlightUsername"));
     }
 
     class MyActionListener implements ActionListener {
@@ -847,64 +817,38 @@ public class MainGui extends JFrame implements Runnable {
             user = ((UserNotice)message).user;
         }
         MsgTags tags = message.tags;
-        boolean ignored = checkInfoMsg(ignoreList, "ignore", message.text, user, tags, channel.getChannel(), client.addressbook);
-        if (!ignored) {
-            //----------------
-            // Output Message
-            //----------------
-            if (!message.isHidden()) {
-                User localUser = client.getLocalUser(channel.getChannel());
-                boolean highlighted = checkInfoMsg(highlighter, "highlight", message.text, user, tags, channel.getChannel(), client.addressbook);
-                if (highlighted) {
-                    message.highlighted = true;
-                    message.highlightMatches = highlighter.getLastTextMatches();
-                    message.color = highlighter.getLastMatchColor();
-                    message.bgColor = highlighter.getLastMatchBackgroundColor();
-
-                    if (!highlighter.getLastMatchNoNotification()) {
-                        channels.setChannelHighlighted(channel);
-                    } else {
-                        channels.setChannelNewMessage(channel);
-                    }
-                    notificationManager.infoHighlight(channel.getRoom(), message.text,
-                            highlighter.getLastMatchNoNotification(),
-                            highlighter.getLastMatchNoSound(), localUser);
-                } else {
-                    notificationManager.info(channel.getRoom(), message.text, localUser);
-                }
-                if (!highlighted || client.settings.getBoolean("msgColorsPrefer")) {
-                    ColorItem colorItem = msgColorManager.getInfoColor(
-                            message.text, channel.getChannel(), client.addressbook, user, localUser, tags);
-                    if (!colorItem.isEmpty()) {
-                        message.color = colorItem.getForegroundIfEnabled();
-                        message.bgColor = colorItem.getBackgroundIfEnabled();
-                    }
-                }
-                // After colors and everything is set
-                if (highlighted) {
-                    highlightedMessages.addInfoMessage(channel.getChannel(), message);
+        //----------------
+        // Output Message
+        //----------------
+        if (!message.isHidden()) {
+            User localUser = client.getLocalUser(channel.getChannel());
+            notificationManager.info(channel.getRoom(), message.text, localUser);
+            if (client.settings.getBoolean("msgColorsPrefer")) {
+                ColorItem colorItem = msgColorManager.getInfoColor(
+                        message.text, channel.getChannel(), client.addressbook, user, localUser, tags);
+                if (!colorItem.isEmpty()) {
+                    message.color = colorItem.getForegroundIfEnabled();
+                    message.bgColor = colorItem.getBackgroundIfEnabled();
                 }
             }
-            channel.printInfoMessage(message);
-            if (channel.getType() == Channel.Type.SPECIAL) {
-                channels.setChannelNewMessage(channel);
-            }
-        } else if (!message.isHidden()) {
-            ignoredMessages.addInfoMessage(channel.getRoom().getDisplayName(), message.text);
+        }
+        channel.printInfoMessage(message);
+        if (channel.getType() == Channel.Type.SPECIAL) {
+            channels.setChannelNewMessage(channel);
         }
 
         //----------
         // Chat Log
         //----------
         if (message.isSystemMsg()) {
-            //client.chatLog.system(channel.getFilename(), message.text);
+            client.chatLog.system(channel.getFilename(), message.text);
         } else if (!message.text.startsWith("[ModAction]")) {
             // ModLog message could be ModLogInfo or generic ModInfo (e.g. for
             // abandoned messages), so just checking the text instead of type or
             // something (ModActions are logged separately)
-            //client.chatLog.info(channel.getFilename(), message.text);
+            client.chatLog.info(channel.getFilename(), message.text);
         }
-        return !ignored;
+        return true;
     }
 
     public void showMessage(final String message) {
@@ -922,23 +866,6 @@ public class MainGui extends JFrame implements Runnable {
         });
     }
 
-    private boolean checkHighlight(Highlighter.HighlightItem.Type type, String text,
-                                   String channel, Addressbook ab, User user, User localUser, MsgTags tags, Highlighter hl,
-                                   String setting, boolean isOwnMessage) {
-        if (client.settings.getBoolean(setting + "Enabled")) {
-            if (client.settings.getBoolean(setting + "OwnText") ||
-                    !isOwnMessage) {
-                return hl.check(type, text, channel, ab, user, localUser, tags);
-            }
-        }
-        return false;
-    }
-
-    private boolean checkInfoMsg(Highlighter hl, String setting, String text,
-                                 User user, MsgTags tags, String channel, Addressbook ab) {
-        return checkHighlight(Highlighter.HighlightItem.Type.INFO, text, channel, ab,
-                user, client.getLocalUser(channel), tags, hl, setting, false);
-    }
 
     /**
      * If not matching message was found for the ModAction to append the @mod,
@@ -1407,13 +1334,6 @@ public class MainGui extends JFrame implements Runnable {
         return ownUsername != null && ownUsername.equalsIgnoreCase(channel_id);
     }
 
-    private boolean checkMsg(Highlighter hl, String setting, String text,
-                             User user, User localUser, MsgTags tags, boolean isOwnMessage) {
-        return checkHighlight(Highlighter.HighlightItem.Type.REGULAR, text, null, null,
-                user, localUser, tags, hl, setting, isOwnMessage);
-    }
-
-
     /**
      * Checks the dedicated user ignore list. The regular ignore list may still
      * ignore the user.
@@ -1434,6 +1354,36 @@ public class MainGui extends JFrame implements Runnable {
 
     private void updateUserInfoDialog(User user) {
         userInfoDialog.update(user, client.getChannelID());
+    }
+
+    private boolean checkHighlight(Highlighter.HighlightItem.Type type, String text,
+                                   String channel, Addressbook ab, User user, User localUser, MsgTags tags, Highlighter hl,
+                                   String setting, boolean isOwnMessage) {
+        if (client.settings.getBoolean(setting + "Enabled")) {
+            if (client.settings.getBoolean(setting + "OwnText") ||
+                    !isOwnMessage) {
+                return hl.check(type, text, channel, ab, user, localUser, tags);
+            }
+        }
+        return false;
+    }
+
+    private boolean checkMsg(Highlighter hl, String setting, String text,
+                             User user, User localUser, MsgTags tags, boolean isOwnMessage) {
+        return checkHighlight(Highlighter.HighlightItem.Type.REGULAR, text, null, null,
+                user, localUser, tags, hl, setting, isOwnMessage);
+    }
+
+    /**
+     * Tells the highlighter the current username and whether it should be used
+     * for highlight. Used to initialize on connect, when the username is fixed
+     * for the duration of the connection.
+     *
+     * @param username The current username.
+     */
+    public void updateHighlightSetUsername(String username) {
+        highlighter.setUsername(username);
+        highlighter.setHighlightUsername(client.settings.getBoolean("highlightUsername"));
     }
 
     /* ############
@@ -1458,7 +1408,7 @@ public class MainGui extends JFrame implements Runnable {
                 // If channel was changed from the given one, change accordingly
                 channel = chan.getChannel();
 
-                boolean isOwnMessage = isOwnChannelID(user.getChannel()) || (whisper && action);
+                boolean isOwnMessage = isOwnChannelID(user.getId()) || (whisper && action);
                 boolean ignoredUser = (userIgnored(user, whisper) && !isOwnMessage);
                 boolean ignored = checkMsg(ignoreList, "ignore", text, user, localUser, tags, isOwnMessage) || ignoredUser;
 
@@ -1542,6 +1492,7 @@ public class MainGui extends JFrame implements Runnable {
                         }
                     }
 
+                    message.whisper = whisper;
                     message.action = action;
                     if (highlighted || hlByPoints) {
                         // Only set message.highlighted instead of highlighted

@@ -3,6 +3,7 @@ package chatty;
 import chatty.util.api.YouTubeApi;
 import chatty.util.api.YouTubeWebParser;
 import chatty.util.irc.MsgTags;
+import chatty.util.irc.ParsedMsg;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.youtube.model.LiveChatMessage;
 import com.google.api.services.youtube.model.LiveChatMessageListResponse;
@@ -13,8 +14,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 public class YouTubeChannelRunnable implements Runnable {
+    private static final Logger LOGGER = Logger.getLogger(YouTubeChannelRunnable.class.getName());
+
+
     boolean stop = false;
     public final YouTubeApi api;
     public final YouTubeLiveChat handler;
@@ -74,14 +79,14 @@ public class YouTubeChannelRunnable implements Runnable {
                 for (int i = 0; i < messages.size(); i++) {
                     LiveChatMessage message = messages.get(i);
                     LiveChatMessageSnippet snippet = message.getSnippet();
-
-                    String user_username = message.getAuthorDetails().getDisplayName();
-                    String user_channel_id = message.getAuthorDetails().getChannelId();
-
-                    Map<String, String> tags_map = new HashMap<>();
-                    tags_map.put("id", message.getId());
-                    MsgTags tags = new MsgTags(tags_map);
-                    handler.onChannelMessage(channel_id, user_channel_id, user_username, snippet.getDisplayMessage(), tags, false);
+                    if (snippet.getType().equalsIgnoreCase("textMessageEvent")) {
+                        String user_username = message.getAuthorDetails().getDisplayName();
+                        String user_channel_id = message.getAuthorDetails().getChannelId();
+                        Map<String, String> tags_map = new HashMap<>();
+                        tags_map.put("id", message.getId());
+                        MsgTags tags = new MsgTags(tags_map);
+                        handler.onChannelMessage(channel_id, user_channel_id, user_username, snippet.getDisplayMessage(), tags, false);
+                    }
                 }
 
                 TimeUnit.MILLISECONDS.sleep(response.getPollingIntervalMillis());
@@ -95,7 +100,5 @@ public class YouTubeChannelRunnable implements Runnable {
     public void stop() {
         stop = true;
     }
-
-
 
 }

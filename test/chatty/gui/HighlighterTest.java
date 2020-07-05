@@ -47,10 +47,10 @@ public class HighlighterTest {
         Map<String, String> badges = new HashMap<>();
         badges.put("vip", "1");
         badges.put("subscriber", "24");
-        user.setTwitchBadges(badges);
+        user.setBadges(badges);
         Map<String, String> badges2 = new HashMap<>();
         badges2.put("subscriber", "12");
-        user2.setTwitchBadges(badges2);
+        user2.setBadges(badges2);
     }
     
     private void update(String... items) {
@@ -456,15 +456,11 @@ public class HighlighterTest {
         
         User modTurbo = new User("test3", Room.createRegular("#test"));
         modTurbo.setModerator(true);
-        modTurbo.setTurbo(true);
         
         User admin = new User("test4", Room.createRegular("#test"));
-        admin.setAdmin(true);
         
         User adminBroadcasterTurbo = new User("test5", Room.createRegular("#test"));
-        adminBroadcasterTurbo.setAdmin(true);
         adminBroadcasterTurbo.setBroadcaster(true);
-        adminBroadcasterTurbo.setTurbo(true);
         
         User staff = new User("test6", Room.createRegular("#test"));
         staff.setStaff(true);
@@ -607,9 +603,9 @@ public class HighlighterTest {
         Highlighter.HighlightItem item = new Highlighter.HighlightItem("");
         assertTrue(item.matchesAny("", null));
         assertTrue(item.matchesAny("abc", null));
-        assertTrue(item.matches(Highlighter.HighlightItem.Type.REGULAR, "", broadcaster, null, MsgTags.EMPTY));
-        assertTrue(item.matches(Highlighter.HighlightItem.Type.REGULAR, "", normal, null, MsgTags.EMPTY));
-        assertFalse(item.matches(Highlighter.HighlightItem.Type.INFO, "", normal, null, MsgTags.EMPTY));
+        assertTrue(item.matches(Type.REGULAR, "", broadcaster, null, MsgTags.EMPTY));
+        assertTrue(item.matches(Type.REGULAR, "", normal, null, MsgTags.EMPTY));
+        assertFalse(item.matches(Type.INFO, "", normal, null, MsgTags.EMPTY));
         
         // Several status prefixes
         update("status:bm status:s");
