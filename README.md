@@ -2,26 +2,26 @@
 YouTube Chatty
 ======
 
-YouTube Chatty is Chatty (which is a Twitch Chat Client) for YouTube. [Chatty's description](https://github.com/chatty/chatty#chatty)
+YouTube Chatty is Chatty (which is a Twitch Chat Client) but tailored for YouTube live chat. [Chatty's description link](https://github.com/chatty/chatty#chatty)
 
 This isn't supposed to be any professional program to use. 
 YouTube Live Chat is horrible. It's really bad for modding etc.
 This was specifically made to combat the regular YouTube Live Chat.
 
-This goes the same with the original owner of Chatty,
+This goes the same with the original owner of Chatty, 
 please let me know if I missed anything.
 
 NOTE
 ========
-This is currectly not fully done for basic use. I am putting this on github before I am fully done with it.
-There is some stuff that isn't needed anymore like Websocket library, those will be removed later.
-Plus the code has workarounds for this to work from the original code, that needs to be removed.
-I am working on at least getting it fully working. 
+This is currectly not completed enough for basic use. I am putting this on github before I am finished with it. 
+There is some stuff that isn't needed anymore such as Websocket library, those will be removed later. 
+Plus the code has workarounds for this to work from the original code, that needs to be removed as it's useless. 
+I am working on at least getting it fully functional.
 
 Download
 ========
 
-There is no releases yet.
+There are no releases yet.
 
 Chatty Information
 =====================
