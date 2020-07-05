@@ -33,7 +33,6 @@ public class UserManager {
     
     private final HashMap<String, HashMap<String, User>> users = new HashMap<>();
     private final HashMap<String, String> cachedColors = new HashMap<>();
-    private boolean capitalizedNames = false;
     
     private final User errorUser = new User("[Error]", Room.createRegular("#[error]"));
     
@@ -60,55 +59,51 @@ public class UserManager {
     public void setLocalChannelID(String channelID) {
         this.localChannelID = channelID;
     }
-    
+
     public void addListener(UserManagerListener listener) {
         if (listener != null) {
             listeners.add(listener);
         }
     }
-    
+
     private void userUpdated(User user) {
         for (UserManagerListener listener : listeners) {
             listener.userUpdated(user);
         }
     }
-    
+
     public  void updateRoom(Room room) {
         Map<String, User> data = getUsersByChannel(room.getChannel());
         for (User user : data.values()) {
             user.setRoom(room);
         }
     }
-    
+
     public void setSettings(Settings settings) {
         this.settings = settings;
     }
-    
-    public void setCapitalizedNames(boolean capitalized) {
-        capitalizedNames = capitalized;
-    }
-    
+
     public void setUsericonManager(UsericonManager manager) {
         usericonManager = manager;
         dummyUser.setUsericonManager(manager);
     }
-    
+
     public void setUsercolorManager(UsercolorManager manager) {
         usercolorManager = manager;
     }
-    
+
     public void setAddressbook(Addressbook addressbook) {
         this.addressbook = addressbook;
     }
-    
+
     public void setCustomNamesManager(CustomNames m) {
         if (m != null) {
             this.customNamesManager = m;
             m.addListener(new CustomNames.CustomNamesListener() {
 
                 @Override
-                public void setName(String name, String customNick) {
-                    List<User> users = getUsersByName(name);
+                public void setName(String channel_id, String customNick) {
+                    List<User> users = getUsersByChannelID(channel_id);
                     for (User user : users) {
                         user.setCustomNick(customNick);
                         userUpdated(user);
@@ -117,19 +112,16 @@ public class UserManager {
             });
         }
     }
-    
+
+
     /**
      * Gets a Map of all User objects in the given channel.
-     * 
+     *
      * @param channel
-     * @return 
+     * @return
      */
     public synchronized HashMap<String, User> getUsersByChannel(String channel) {
-        HashMap<String, User> result = users.get(channel);
-        if (result == null) {
-            result = new HashMap<>();
-            users.put(channel, result);
-        }
+        HashMap<String, User> result = users.computeIfAbsent(channel, k -> new HashMap<>());
         return result;
     }
 
@@ -137,16 +129,14 @@ public class UserManager {
      * Searches all channels for the given username and returns a List of all
      * the associated User objects. Does not create User object, only return
      * existing ones.
-     * 
-     * @param name The username to search for
+     *
+     * @param channel_id The channel id to search for
      * @return The List of User-objects.
      */
-    public synchronized List<User> getUsersByName(String name) {
+    public synchronized List<User> getUsersByChannelID(String channel_id) {
         List<User> result = new ArrayList<>();
-        Iterator<HashMap<String, User>> it = users.values().iterator();
-        while (it.hasNext()) {
-            HashMap<String, User> channelUsers = it.next();
-            User user = channelUsers.get(name);
+        for (HashMap<String, User> channelUsers : users.values()) {
+            User user = channelUsers.get(channel_id);
             if (user != null) {
                 result.add(user);
             }
@@ -154,23 +144,25 @@ public class UserManager {
         return result;
     }
 
+
     /**
      * Returns the user for the given channel and name, but only if an object
      * already exists.
-     * 
+     *
      * @param channel
-     * @param name
+     * @param channel_id
      * @return The {@code User} object or null if none exists
      */
     public synchronized User getUserIfExists(String channel, String channel_id) {
         return getUsersByChannel(channel).get(channel_id);
     }
-    
+
+
     /**
      * Returns the User with the given name or creates a new User object if none
      * exists for this name.
      *
-     * @param channel
+     * @param room
      * @param name The name of the user
      * @return The matching User object
      * @see User
@@ -182,6 +174,12 @@ public class UserManager {
         }
         User user = getUserIfExists(room.getChannel(), channel_id);
         if (user == null) {
+            if(name == null) {
+                /*
+                    Not allowed to create user without a name variable
+                 */
+                return null;
+            }
             user = new User(channel_id, name, room);
             user.setUsercolorManager(usercolorManager);
             user.setAddressbook(addressbook);
@@ -191,13 +189,6 @@ public class UserManager {
                 user.setColor(cachedColors.get(channel_id));
             }
             if (channel_id.equals(localChannelID)) {
-                /**
-                 * Set initial data for local user that is globally valid. This
-                 * data would have been received from the GLOBALUSERSTATE
-                 * command which may not be send after every join or sent
-                 * message.
-                 */
-                //user.setStaff(specialUser.isStaff());
                 user.setId(channel_id);
                 user.setLocalUser(true);
                 if (!specialUser.hasDefaultColor()) {
@@ -209,25 +200,26 @@ public class UserManager {
         }
         return user;
     }
-    
+
+
     /**
      * Searches all channels for the given username and returns a Map with
      * all channels the username was found in and the associated User objects.
-     * 
+     *
      * @param name The username to be searched for
      * @return A Map with channel->User association
      */
     public synchronized HashMap<String,User> getChannelsAndUsersByUserName(String name) {
         String lowercaseName = StringUtil.toLowerCase(name);
         HashMap<String,User> result = new HashMap<>();
-        
+
         Iterator<Entry<String, HashMap<String, User>>> it = users.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, HashMap<String, User>> channel = it.next();
-            
+
             String channelName = channel.getKey();
             HashMap<String,User> channelUsers = channel.getValue();
-            
+
             User user = channelUsers.get(lowercaseName);
             if (user != null) {
                 result.put(channelName,user);
@@ -235,23 +227,23 @@ public class UserManager {
         }
         return result;
     }
-    
+
     /**
      * Remove all users.
      */
     public synchronized void clear() {
         users.clear();
     }
-    
+
     /**
      * Remove all users of the given channel.
-     * 
-     * @param channel 
+     *
+     * @param channel
      */
     public synchronized void clear(String channel) {
         getUsersByChannel(channel).clear();
     }
-    
+
     public synchronized void clearMessagesOfInactiveUsers() {
         if (settings == null) {
             return;
@@ -267,7 +259,7 @@ public class UserManager {
             LOGGER.info("Cleared "+numRemoved+" user messages");
         }
     }
-    
+
     /**
      * Set all users offline.
      */
@@ -277,11 +269,11 @@ public class UserManager {
             setAllOffline(it.next());
         }
     }
-    
+
     /**
      * Set all users of the given channel offline.
-     * 
-     * @param channel 
+     *
+     * @param channel
      */
     public synchronized void setAllOffline(String channel) {
         if (channel == null) {
@@ -292,41 +284,42 @@ public class UserManager {
             setAllOffline(usersInChannel);
         }
     }
-    
+
+
     /**
      * Set all given users offline. Helper method.
-     * 
-     * @param usersInChannel 
+     *
+     * @param usersInChannel
      */
     private void setAllOffline(Map<String, User> usersInChannel) {
         for (User user : usersInChannel.values()) {
             user.setOnline(false);
         }
     }
-    
+
+
     /**
      * Sets the color of a user across all channels.
-     * 
-     * @param userName String The name of the user
+     *
+     * @param channel_id String The name of the user
      * @param color String The color as a string representation
      */
-    protected synchronized void setColorForUsername(String userName, String color) {
-        userName = StringUtil.toLowerCase(userName);
-        cachedColors.put(userName,color);
-        
-        List<User> userAllChans = getUsersByName(userName);
+    protected synchronized void setColorForUsername(String channel_id, String color) {
+        cachedColors.put(channel_id,color);
+
+        List<User> userAllChans = getUsersByChannelID(channel_id);
         for (User user : userAllChans) {
             user.setColor(color);
         }
     }
-    
+
     /**
      * The list of mods received with channel context, set the containing names
      * as mod. Returns the changed users so they can be updated in the GUI.
-     * 
+     *
      * @param channel
      * @param modsList
-     * @return 
+     * @return
      */
     protected synchronized List<User> modsListReceived(Room room, List<String> modsList) {
         // Demod everyone on the channel
@@ -348,7 +341,7 @@ public class UserManager {
         }
         return changedUsers;
     }
-    
+
     public static interface UserManagerListener {
         public void userUpdated(User user);
     }

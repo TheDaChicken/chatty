@@ -456,6 +456,18 @@ public class MainGui extends JFrame implements Runnable {
         filter.update(StringUtil.getStringList(client.settings.getList("filter")));
     }
 
+    /**
+     * Tells the highlighter the current username and whether it should be used
+     * for highlight. Used to initialize on connect, when the username is fixed
+     * for the duration of the connection.
+     *
+     * @param username The current username.
+     */
+    public void updateHighlightSetUsername(String channel_id) {
+        highlighter.setChannelID(channel_id);
+        highlighter.setHighlightUsername(client.settings.getBoolean("highlightUsername"));
+    }
+
     class MyActionListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent event) {
@@ -480,10 +492,13 @@ public class MainGui extends JFrame implements Runnable {
                 //client.settings.setString("username",name);
                 client.settings.setString("password", password);
                 client.settings.setString("channel", channel);
-                if (client.prepareConnection(connectionDialog.rejoinOpenChannels())) {
+                // AUTOJOIN* CHANNELS
+                if (client.prepareChannels(connectionDialog.rejoinOpenChannels())) {
                     connectionDialog.setVisible(false);
                     channels.setInitialFocus();
                 }
+                connectionDialog.setVisible(false);
+                channels.setInitialFocus();
             } else if (event.getSource() == connectionDialog.getGetTokenButton()) {
                 openTokenDialog();
             } else if (event.getSource() == connectionDialog.getFavoritesButton()) {
@@ -1105,13 +1120,13 @@ public class MainGui extends JFrame implements Runnable {
          * @param state
          */
         private void updateMenuState(int state) {
-            if (state > YouTubeLiveChat.STATE_OFFLINE || state == YouTubeLiveChat.STATE_RECONNECTING) {
+            if (state > YouTubeLiveChat.STATE_NONE) {
                 menu.getMenuItem("connect").setEnabled(false);
             } else {
                 menu.getMenuItem("connect").setEnabled(true);
             }
 
-            if (state > YouTubeLiveChat.STATE_CONNECTING || state == YouTubeLiveChat.STATE_RECONNECTING) {
+            if (state > YouTubeLiveChat.STATE_NONE) {
                 menu.getMenuItem("disconnect").setEnabled(true);
             } else {
                 menu.getMenuItem("disconnect").setEnabled(false);
@@ -1150,6 +1165,9 @@ public class MainGui extends JFrame implements Runnable {
          * @return The created title
          */
         private String makeTitle(Channel channel, int state) {
+            /*
+                Make Title TODO
+             */
             String channelName = channel.getName();
             String chan = channel.getChannel();
 
@@ -1157,7 +1175,7 @@ public class MainGui extends JFrame implements Runnable {
             String stateText = "";
 
             String title = stateText;
-            return title;
+            return "Chatty";
         }
     }
 
@@ -1383,10 +1401,6 @@ public class MainGui extends JFrame implements Runnable {
         }
     }
 
-
-    private void openUpdateDialog() {
-
-    }
 
     private boolean isOwnChannelID(String channel_id) {
         String ownUsername = client.getChannelID();
@@ -1625,21 +1639,6 @@ public class MainGui extends JFrame implements Runnable {
             }
         }
 
-    }
-
-    /**
-     * Exit the program.
-     */
-    private void exit() {
-        client.exit();
-    }
-
-    public void cleanUp() {
-        if (SwingUtilities.isEventDispatchThread()) {
-            hotkeyManager.cleanUp();
-            setVisible(false);
-            dispose();
-        }
     }
 
     private class MyNotificationActionListener implements NotificationActionListener<String> {
@@ -2027,13 +2026,27 @@ public class MainGui extends JFrame implements Runnable {
 
     public void removeChannel(final String channel) {
         SwingUtilities.invokeLater(new Runnable() {
-
             @Override
             public void run() {
                 channels.removeChannel(channel);
                 state.update();
             }
         });
+    }
+
+    /**
+     * Exit the program.
+     */
+    private void exit() {
+        client.exit();
+    }
+
+    public void cleanUp() {
+        if (SwingUtilities.isEventDispatchThread()) {
+            hotkeyManager.cleanUp();
+            setVisible(false);
+            dispose();
+        }
     }
 
 }

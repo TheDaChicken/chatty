@@ -529,7 +529,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             style = styles.standard(color);
         }
         printTimestamp(style);
-        printUser(user, action, message.whisper, message.id, background, message.pointsHl);
+        printUser(user, action, message.id, background, message.pointsHl);
         
         // Change style for text if /me and no highlight (if enabled)
         if (!highlighted && color == null && action && styles.isEnabled(Setting.ACTION_COLORED)) {
@@ -1797,12 +1797,10 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * Outputs a clickable and colored nickname.
      * 
      * @param user
-     * @param action 
-     * @param whisper 
+     * @param action
      * @param msgId 
      */
-    private void printUser(User user, boolean action,
-            boolean whisper, String msgId, Color background, boolean pointsHl) {
+    private void printUser(User user, boolean action, String msgId, Color background, boolean pointsHl) {
         
         // Decide on name based on settings and available names
         String userName;
@@ -1831,36 +1829,17 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             printRainbowUser(user, userName, action, SpecialColor.GOLD, msgId);
         } else {
             MutableAttributeSet style = styles.messageUser(user, msgId, background);
-            if (whisper) {
-                if (action) {
-                    print(">>["+userName + "]", style);
-                } else {
-                    print("-["+userName + "]-", style);
-                }
-            } else if (action) {
+            if (action) {
                 print("* " + userName, style);
             } else {
                 print(userName, style);
             }
         }
         
-        // Add username in parentheses behind, if necessary
-        if (!user.hasCustomNickSet()
-                && styles.namesMode() == SettingsManager.DISPLAY_NAMES_MODE_BOTH) {
-            MutableAttributeSet style = styles.messageUser(user, msgId, background);
-            StyleConstants.setBold(style, false);
-            int fontSize = StyleConstants.getFontSize(style) - 2;
-            if (fontSize <= 0) {
-                fontSize = StyleConstants.getFontSize(style);
-            }
-            StyleConstants.setFontSize(style, fontSize);
-            print(" ("+user.getName()+")", style);
-        }
-        
         // Finish up
         // Requires user style because it needs the metadata to detect the end
         // of the nick when deleting messages (and possibly other stuff)
-        if (!action && !whisper) {
+        if (!action) {
             print(":", styles.messageUser(user, msgId, background));
         } else {
             //print(" ", styles.messageUser(user));

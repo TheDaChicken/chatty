@@ -167,20 +167,20 @@ public class YouTubeClient {
 
         // Connect or open connect dialog
         if (settings.getBoolean("connectOnStartup")) {
-            prepareConnection();
+            //prepareConnection();
         } else {
             switch ((int)settings.getLong("onStart")) {
                 case 1:
                     g.openConnectDialog(null);
                     break;
                 case 2:
-                    prepareConnectionWithChannel(settings.getString("autojoinChannel"));
+                    prepareChannels(settings.getString("autojoinChannel"));
                     break;
                 case 3:
-                    prepareConnectionWithChannel(settings.getString("previousChannel"));
+                    prepareChannels(settings.getString("previousChannel"));
                     break;
                 case 4:
-                    prepareConnectionWithChannel(Helper.buildStreamsString(channelFavorites.getFavorites()));
+                    prepareChannels(Helper.buildStreamsString(channelFavorites.getFavorites()));
                     break;
             }
 
@@ -448,16 +448,6 @@ public class YouTubeClient {
         }
 
         @Override
-        public void onJoin(User user) {
-            LOGGER.info("onJoin();");
-        }
-
-        @Override
-        public void onPart(User user) {
-            LOGGER.info("onPart();");
-        }
-
-        @Override
         public void onUserAdded(User user) {
 
         }
@@ -484,11 +474,6 @@ public class YouTubeClient {
                 //addressbookCommands(user.getChannel(), user, text);
                 //modCommandAddStreamHighlight(user, text, tags);
             }
-        }
-
-        @Override
-        public void onWhisper(User user, String message, String emotes) {
-
         }
 
         @Override
@@ -523,7 +508,7 @@ public class YouTubeClient {
 
         @Override
         public void onRegistered() {
-
+            g.updateHighlightSetUsername(c.getChannelID());
         }
 
         @Override
@@ -686,49 +671,30 @@ public class YouTubeClient {
      *
      * @return
      */
-    public final boolean prepareConnection() {
-        return prepareConnection(getServer(), getPorts());
-    }
 
-    public boolean prepareConnection(boolean rejoinOpenChannels) {
+    public boolean prepareChannels(boolean rejoinOpenChannels) {
         if (rejoinOpenChannels) {
-            return prepareConnection(getServer(), getPorts(), null);
+            return prepareChannels(null);
         } else {
-            return prepareConnection();
+            return prepareChannels();
         }
     }
 
-    public final boolean prepareConnectionWithChannel(String channel) {
-        return prepareConnection(getServer(), getPorts(), channel);
+    public boolean prepareChannels() {
+        return prepareChannels(settings.getString("channel"));
     }
 
-    public boolean prepareConnection(String server, String ports) {
-        return prepareConnection(server, ports, settings.getString("channel"));
-    }
-
-    public final boolean prepareConnectionAnyChannel(String server, String ports) {
+    public final boolean prepareChannelAnyChannel() {
         String channel = null;
         if (c.getOpenChannels().isEmpty()) {
             channel = settings.getString("channel");
         }
-        return prepareConnection(server, ports, null);
+        return prepareChannels(channel);
     }
 
-    /**
-     * Prepares the connection while getting everything from the renametings,
-     * except the server/port.
-     *
-     * @param server
-     * @param ports
-     * @return
-     */
-    public boolean prepareConnection(String server, String ports, String channel) {
+    public boolean prepareChannels(String channel) {
         String username = settings.getString("username");
-        String password = settings.getString("password");
-        boolean usePassword = settings.getBoolean("usePassword");
-        String token = settings.getString("tokens");
-
-        return prepareConnection(username,null, channel,server, ports);
+        return prepareChannels(username, channel);
     }
 
     /**
@@ -737,16 +703,13 @@ public class YouTubeClient {
      * This does stuff that should only be done once, unless the given parameters
      * change. So this shouldn't be repeated for just reconnecting.
      *
-     * @param name The username to use for connecting.
-     * @param password The password to connect with.
+     * @param username The username to use for connecting.
      * @param channel The channel(s) to join after connecting, if this is null
      * then it rejoins the currently open channels (if any)
-     * @param server The server to connect to.
-     * @param ports The port to connect to.
      * @return true if no formal error occured, false otherwise
      */
-    public boolean prepareConnection(String name, String password,
-                                     String channel, String server, String ports) {
+    public boolean prepareChannels(String username, String channel) {
+        LOGGER.info("prepareChannel();");
         String[] autojoin;
         Set<String> openChannels = c.getOpenChannels();
         if (channel == null) {
@@ -761,17 +724,12 @@ public class YouTubeClient {
             return false;
         }
 
-        if (server == null || server.isEmpty()) {
-            g.showMessage("Invalid server specified.");
-            return false;
-        }
-
-        settings.setString("username", name);
+        settings.setString("username", username);
         if (channel != null) {
             settings.setString("channel", channel);
         }
 
-        c.connect(server, ports, name, password, autojoin);
+        c.prepareAutoJoin(username, autojoin);
         return true;
     }
 

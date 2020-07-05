@@ -27,30 +27,17 @@ public abstract class YouTubeLiveChat {
 
     private long connectedSince = -1;
 
-    private volatile int state = STATE_OFFLINE;
+    private volatile int state = STATE_NONE;
 
-    /**
-     * State while reconnecting.
-     */
-    public static final int STATE_RECONNECTING = -1;
     /**
      * State while being offline, either not connected or already disconnected
      * without reconnecting.
      */
-    public static final int STATE_OFFLINE = 0;
+    public static final int STATE_NONE = 0;
     /**
-     * State value while trying to connect (opening socket and streams).
+     * State value after being "enabled" or ("connected")
      */
-    public static final int STATE_CONNECTING = 1;
-    /**
-     * State value after having connected (socket and streams successfully opened).
-     */
-    public static final int STATE_CONNECTED = 2;
-    /**
-     * State value once the connection has been accepted by the IRC Server
-     * (registered).
-     */
-    public static final int STATE_REGISTERED = 3;
+    public static final int STATE_ENABLED = 2;
 
     /**
      * Disconnect reason value for Unknown host.
@@ -118,11 +105,11 @@ public abstract class YouTubeLiveChat {
     }
 
     public boolean isRegistered() {
-        return state == STATE_REGISTERED;
+        return state == STATE_ENABLED;
     }
 
     public boolean isOffline() {
-        return state == STATE_OFFLINE;
+        return state == STATE_NONE;
     }
 
     public String getConnectedSince() {
@@ -137,19 +124,13 @@ public abstract class YouTubeLiveChat {
     abstract public void debug(String line);
 
     public final void connect() {
-        if (state >= STATE_CONNECTED) {
-            warning("Already connected.");
+        if (state >= STATE_ENABLED) {
+            warning("Already enabled.");
             return;
         }
 
-        if (state >= STATE_CONNECTING) {
-            warning("Already trying to connect.");
-            return;
-        }
-
-        state = STATE_CONNECTING;
         onConnectionAttempt("no_ip", 0, true);
-        connected();
+        fake_connected();
     }
 
     public boolean disconnect() {
@@ -184,7 +165,7 @@ public abstract class YouTubeLiveChat {
      * @param channel_identifier
      */
     public void joinChannelImmediately(String channel_identifier) {
-        if (state >= STATE_REGISTERED) {
+        if (state >= STATE_ENABLED) {
             YouTubeChannelRunnable channelRunnable = new YouTubeChannelRunnable(this, api);
             onJoinAttempt(channel_identifier);
             int result = channelRunnable.loadInformation(channel_identifier);
@@ -226,11 +207,10 @@ public abstract class YouTubeLiveChat {
      * sending credentials and stuff.
      *
      */
-    protected void connected() {
+    protected void fake_connected() {
         this.connectedSince = System.currentTimeMillis();
-        setState(YouTubeLiveChat.STATE_CONNECTED);
+        setState(YouTubeLiveChat.STATE_ENABLED);
         onConnect();
-        setState(STATE_REGISTERED);
         onRegistered();
     }
 
@@ -252,7 +232,7 @@ public abstract class YouTubeLiveChat {
         // Retrieve state before changing it, but must be changed before calling
         // onDisconnect() which might check the state when trying to reconnect
         int oldState = getState();
-        setState(YouTubeLiveChat.STATE_OFFLINE);
+        setState(YouTubeLiveChat.STATE_NONE);
     }
 
     /**

@@ -61,7 +61,7 @@ public class YouTubeConnection {
         this.api = api;
         spamProtection = new SpamProtection();
         spamProtection.setLinesPerSeconds(settings.getString("spamProtection"));
-        users.setCapitalizedNames(settings.getBoolean("capitalizedNames"));
+        //users.setCapitalizedNames(settings.getBoolean("capitalizedNames"));
         users.setSettings(settings);
     }
 
@@ -206,22 +206,22 @@ public class YouTubeConnection {
      * @param password The password
      * @param autojoin The channels to join after connecting
      */
-    public void connect(String server, String serverPorts, String channel_id, String password, String[] autojoin) {
+    public void prepareAutoJoin(String channel_id, String[] autojoin) {
         this.channel_id = channel_id;
-        users.setLocalChannelID(channel_id);
         this.autojoin = autojoin;
-        connect();
+        users.setLocalChannelID(channel_id);
+        start();
     }
 
     /**
      * Connect to the main connection based on the current login data. Will only
      * connect it not already connected/connecting.
      */
-    private void connect() {
-        if (liveChat.getState() <= YouTubeLiveChat.STATE_OFFLINE) {
+    private void start() {
+        if (liveChat.getState() <= YouTubeLiveChat.STATE_NONE) {
             liveChat.connect();
         } else {
-            listener.onConnectError("Already connected or connecting.");
+            listener.onConnectError("Already enabled.");
         }
     }
 
@@ -315,12 +315,6 @@ public class YouTubeConnection {
      */
     private class YouTubeLiveChatHandler extends YouTubeLiveChat {
         /**
-         * How many times was tried to connect. Reset when the connection is
-         * fully established (registered).
-         */
-        private int connectionAttempts = 0;
-
-        /**
          * Channels that this connection has joined. This is per connection, so
          * the main and secondary connection have different data here.
          */
@@ -376,8 +370,6 @@ public class YouTubeConnection {
 
         @Override
         void onRegistered() {
-            connectionAttempts = 1;
-
             if (this != liveChat) {
                 return;
             }
@@ -409,7 +401,6 @@ public class YouTubeConnection {
         }
 
         private void clearUserlist(String channel) {
-            //System.out.println("userlist cleared"+channel);
             users.setAllOffline(channel);
             listener.onUserlistCleared(channel);
         }
@@ -501,10 +492,6 @@ public class YouTubeConnection {
 
         void onChannelLeft(Room room, boolean closeChannel);
 
-        void onJoin(User user);
-
-        void onPart(User user);
-
         void onUserAdded(User user);
 
         void onUserRemoved(User user);
@@ -514,8 +501,6 @@ public class YouTubeConnection {
         void onUserUpdated(User user);
 
         void onChannelMessage(User user, String msg, boolean action, MsgTags tags);
-
-        void onWhisper(User user, String message, String emotes);
 
         void onNotice(String message);
 
@@ -589,7 +574,6 @@ public class YouTubeConnection {
         void onSpecialMessage(String name, String message);
 
         void onRoomId(String channel, String id);
-
     }
 
     /**

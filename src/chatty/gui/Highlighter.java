@@ -90,12 +90,12 @@ public class Highlighter {
      * 
      * @param username 
      */
-    public void setUsername(String username) {
-        if (username == null) {
+    public void setChannelID(String channel_id) {
+        if (channel_id == null) {
             usernameItem = null;
         }
         else {
-            HighlightItem newItem = new HighlightItem("w:"+username);
+            HighlightItem newItem = new HighlightItem("w:"+channel_id);
             if (!newItem.hasError()) {
                 usernameItem = newItem;
             } else {
