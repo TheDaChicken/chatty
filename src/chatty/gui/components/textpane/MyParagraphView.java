@@ -35,7 +35,7 @@ class MyParagraphView extends ParagraphView {
     
     public MyParagraphView(Element elem) {
         super(elem);
-        strategy = new MyParagraphView.MyFlowStrategy();
+        strategy = new MyFlowStrategy();
     }
 
     public static class MyFlowStrategy extends FlowStrategy {

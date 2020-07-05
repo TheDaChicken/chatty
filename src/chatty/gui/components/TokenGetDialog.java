@@ -2,12 +2,14 @@
 package chatty.gui.components;
 
 import chatty.Helper;
-import chatty.TwitchClient;
+import chatty.YouTubeClient;
 import chatty.gui.MainGui;
 import chatty.gui.UrlOpener;
 import chatty.util.MiscUtil;
 import chatty.util.api.TokenInfo;
 import chatty.util.api.TokenInfo.Scope;
+import chatty.util.api.YouTubeAuth;
+
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -15,7 +17,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import javax.swing.*;
 
@@ -45,7 +49,7 @@ public class TokenGetDialog extends JDialog implements ItemListener, ActionListe
 
     private final Map<Scope, JCheckBox> checkboxes = new HashMap<>();
     
-    private String currentUrl = TwitchClient.REQUEST_TOKEN_URL;
+    private String currentUrl = YouTubeClient.REQUEST_TOKEN_URL;
     
     public TokenGetDialog(MainGui owner) {
         super(owner,"Get login data",true);
@@ -63,12 +67,12 @@ public class TokenGetDialog extends JDialog implements ItemListener, ActionListe
         add(info, gbc);
         
         int y = 1;
-        for (Scope scope : TokenInfo.Scope.values()) {
+        for (Scope scope : Scope.values()) {
             JCheckBox checkbox = new JCheckBox(scope.label);
             checkbox.setToolTipText(scope.description);
             checkbox.setSelected(true);
             checkbox.addItemListener(e -> updateUrl());
-            if (scope == Scope.CHAT) {
+            if (scope == Scope.FULL_SCOPE) {
                 checkbox.setEnabled(false);
             }
             gbc = makeGridBagConstraints(0, y, 2, 1, GridBagConstraints.WEST);
@@ -149,17 +153,14 @@ public class TokenGetDialog extends JDialog implements ItemListener, ActionListe
     }
     
     private void updateUrl() {
-        String scopes = "";
+        List<String> scopes = new ArrayList<>();
         for (Map.Entry<Scope, JCheckBox> entry : checkboxes.entrySet()) {
             JCheckBox checkbox = entry.getValue();
             if (checkbox.isSelected()) {
-                scopes += "+"+entry.getKey().scope;
+                scopes.add(entry.getKey().scope);
             }
         }
-        if (!scopes.isEmpty()) {
-            scopes = scopes.substring(1);
-        }
-        String url = TwitchClient.REQUEST_TOKEN_URL+scopes;
+        String url = YouTubeAuth.getAuthURL(scopes);
         currentUrl = url;
         urlField.setText(url);
         urlField.setToolTipText(url);

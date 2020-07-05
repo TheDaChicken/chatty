@@ -1,7 +1,7 @@
 
 package chatty.gui.components.menus;
 
-import chatty.TwitchClient;
+import chatty.YouTubeClient;
 import chatty.lang.Language;
 import chatty.util.StringUtil;
 import java.awt.event.ActionEvent;
@@ -17,7 +17,7 @@ import javax.swing.JOptionPane;
  */
 public class StreamChatContextMenu extends ContextMenu {
     
-    public static TwitchClient client;
+    public static YouTubeClient client;
     
     private static final String CHANNEL_SETTING = "streamChatChannels";
     private static final String LOGO_SETTING = "streamChatLogos";

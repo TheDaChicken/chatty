@@ -32,9 +32,9 @@ import javax.swing.plaf.metal.OceanTheme;
  * @author tduva
  */
 public class LaF {
-    
+
     private static final Logger LOGGER = Logger.getLogger(LaF.class.getName());
-    
+
     private static LaFSettings settings;
     private static String linkColor = "#0000FF";
     private static boolean isDarkTheme;
@@ -42,36 +42,36 @@ public class LaF {
     private static Color tabForegroundUnread = new Color(200,0,0);
     private static Color tabForegroundHighlight = new Color(255,80,0);
     private static Border inputBorder;
-    
+
     public static String getLinkColor() {
         return linkColor;
     }
-    
+
     public static Color getTabForegroundUnread() {
         return tabForegroundUnread;
     }
-    
+
     public static Color getTabForegroundHighlight() {
         return tabForegroundHighlight;
     }
-    
+
     public static boolean isDarkTheme() {
         return isDarkTheme;
     }
-    
+
     public static Border getInputBorder() {
         return inputBorder;
     }
-    
+
     public static boolean shouldUpdate(String settingName) {
         List<String> settingNames = Arrays.asList(new String[]{
-            "laf", "lafTheme", "lafScroll", "lafForeground", "lafBackground",
-            "lafStyle", "lafCustomTheme", "lafGradient", "lafVariant"});
+                "laf", "lafTheme", "lafScroll", "lafForeground", "lafBackground",
+                "lafStyle", "lafCustomTheme", "lafGradient", "lafVariant"});
         return settingNames.contains(settingName);
     }
-    
+
     public static class LaFSettings {
-        
+
         public final String lafCode;
         public final String theme;
         public final int fontScale;
@@ -82,7 +82,7 @@ public class LaF {
         public final int gradient;
         public final String scroll;
         public final int variant;
-        
+
         public LaFSettings(String lafCode, String theme, int fontScale,
                            Map<String, String> custom, Color fg, Color bg,
                            String style, int gradient, String scroll, int variant) {
@@ -97,7 +97,7 @@ public class LaF {
             this.scroll = scroll;
             this.variant = variant;
         }
-        
+
         public static LaFSettings fromSettings(Settings settings) {
             String lafCode = settings.getString("laf");
             String lafTheme = settings.getString("lafTheme");
@@ -111,7 +111,7 @@ public class LaF {
             Map<String, String> custom = settings.getMap("lafCustomTheme");
             return new LaFSettings(lafCode, lafTheme, lafFontScale, custom, fg, bg, style, gradient, scroll, variant);
         }
-        
+
         public static LaFSettings fromSettingsDialog(SettingsDialog d, Settings settings) {
             String lafCode = d.getStringSetting("laf");
             String lafTheme = d.getStringSetting("lafTheme");
@@ -125,9 +125,9 @@ public class LaF {
             Map<String, String> custom = settings.getMap("lafCustomTheme");
             return new LaFSettings(lafCode, lafTheme, lafFontScale, custom, fg, bg, style, gradient, scroll, variant);
         }
-        
+
     }
-    
+
     public static void setLookAndFeel(LaFSettings settings) {
         LaFUtil.resetDefaults();
         inputBorder = null;
@@ -221,7 +221,7 @@ public class LaF {
                         MetalLookAndFeel.setCurrentTheme(new OceanTheme());
                 }
             }
-            
+
             LOGGER.info("[LAF] Set " + lafCode + "/" + theme + " [" + laf + "]");
             UIManager.setLookAndFeel(laf);
             lafClass = laf;
@@ -229,7 +229,7 @@ public class LaF {
         } catch (Exception ex) {
             LOGGER.warning("[LAF] Failed setting LAF: "+ex);
         }
-        
+
         isDarkTheme = determineDarkTheme();
         // Set some settings not directly used by the LAF, but based on LAF.
         if (isDarkTheme) {
@@ -241,7 +241,7 @@ public class LaF {
         }
         loadOtherCustom();
     }
-    
+
     private static boolean determineDarkTheme() {
         Color color = UIManager.getColor("Panel.background");
         if (color != null && ColorCorrectionNew.getLightness(color) < 128) {
@@ -249,14 +249,14 @@ public class LaF {
         }
         return false;
     }
-    
+
     private static void modifyDefaults() {
         //--------------------------
         // Simple overrides
         //--------------------------
         // Tab rows not overlaying eachother
         LaFUtil.putDefault("TabbedPane.tabRunOverlay", 0);
-        
+
         //--------------------------
         // Special font override
         //--------------------------
@@ -270,7 +270,7 @@ public class LaF {
         } catch (Exception ex) {
             LOGGER.warning("[LAF] Failed to change TextArea.font: "+ex);
         }
-        
+
         //--------------------------
         // Font size
         //--------------------------
@@ -288,7 +288,7 @@ public class LaF {
                 return null;
             });
         }
-        
+
         // Maybe add an option for this sometime
 //            modifyDefaults((k, v) -> {
 //                if (v instanceof FontUIResource) {
@@ -297,7 +297,7 @@ public class LaF {
 //                }
 //                return null;
 //            });
-        
+
         //--------------------------
         // Scrollbar
         //--------------------------
@@ -314,7 +314,7 @@ public class LaF {
                     break;
             }
         }
-        
+
         //--------------------------
         // Custom
         //--------------------------
@@ -334,16 +334,16 @@ public class LaF {
             }
         }
     }
-        
+
     public static void updateLookAndFeel() {
         LaFUtil.updateLookAndFeel();
     }
-    
+
     /**
      * Prepare a JTattoo theme.
-     * 
+     *
      * @param properties
-     * @return 
+     * @return
      */
     private static Properties prepareTheme(Properties properties) {
         if (properties == null) {
@@ -363,12 +363,12 @@ public class LaF {
         }
         return properties;
     }
-    
+
     /**
      * Add custom properties to a JTattoo theme.
-     * 
+     *
      * @param properties
-     * @return 
+     * @return
      */
     private static Properties addCustom(Properties properties) {
         if (!settings.custom.isEmpty()) {
@@ -377,7 +377,7 @@ public class LaF {
         }
         return properties;
     }
-    
+
     /**
      * Load custom properties that aren't directly used by a LAF.
      */
@@ -393,14 +393,14 @@ public class LaF {
             }
         }
     }
-    
+
     /**
      * Get a color from custom properties.
-     * 
+     *
      * @param properties
      * @param key
      * @param defaultValue
-     * @return 
+     * @return
      */
     private static Color loadCustomColor(String key, Color defaultValue) {
         String value = settings.custom.get(key);
@@ -409,11 +409,11 @@ public class LaF {
         }
         return defaultValue;
     }
-    
+
     /**
      * Colors for "hifiCustom" JTattoo LaF.
-     * 
-     * @param p 
+     *
+     * @param p
      */
     private static void customColors(Properties p) {
         if (settings == null) {
@@ -422,7 +422,7 @@ public class LaF {
         Color bg = settings.bg;
         Color fg = settings.fg;
         float gradient = (float)(settings.gradient / 100.0);
-        
+
         float contrast = 1f;
         switch (settings.variant) {
             case 1:
@@ -440,7 +440,7 @@ public class LaF {
         }
         float contrastLight = (float)(contrast + (1 - contrast)*0.5);
         float contrastLighter = (float)(contrast + (1 - contrast)*0.7);
-        
+
         float titleBgC = 0;
         float inactiveTitleBgC = 0;
         float activeGradient = 0;
@@ -450,13 +450,13 @@ public class LaF {
         float buttonBgC = 0.03f;
         float menuBgC = 0f;
         int tabSeparatorStyle = 0;
-        
+
         boolean minimalistic = false;
-        
+
         Color lighterFg = changeColor(fg, 0.3f * contrastLight);
         Color activeTitleFg = changeColor(lighterFg, 0f);
         Color inactiveTitleFg = changeColor(fg, -0.3f);
-        
+
         switch (settings.style) {
             case "classic":
                 titleBgC = -0.05f;
@@ -507,7 +507,7 @@ public class LaF {
                 minimalistic = true;
                 break;
         }
-        
+
         titleBgC *= contrast;
         inactiveTitleBgC *= contrast;
         activeGradient *= contrast;
@@ -516,7 +516,7 @@ public class LaF {
         controlBgC *= contrastLight;
         buttonBgC *= contrast;
         menuBgC *= contrastLight;
-        
+
         // Window
         Color titleBg = changeColor(bg, titleBgC);
         Color inactiveTitleBg = changeColor(bg, inactiveTitleBgC);
@@ -530,11 +530,11 @@ public class LaF {
         }
         setColor(p, "windowIconColor", inactiveTitleFg);
         setColor(p, "windowIconRolloverColor", activeTitleFg);
-        
+
         // Window Border
         setColor(p, "windowBorderColor", bg, -0.4f * contrastLight);
         setColor(p, "windowInactiveBorderColor", bg, -0.4f * contrastLight);
-        
+
         // Some frames (like scrollpane, tabpane and more)
         if (minimalistic) {
             LaFUtil.putDefault("ScrollPane.border", LaFCustomDefaults.EMPTY_BORDER);
@@ -545,39 +545,39 @@ public class LaF {
         }
         setColor(p, "frameColor", bg, frameFgC);
         setColor(p, "frameColor2", bg, frame2FgC);
-        
+
         // General
         setColor(p, "foregroundColor", fg, 0);
         setColor(p, "backgroundColor", bg);
-        
+
         // "Greyed out" GUI elements
         setColor(p, "disabledBackgroundColor", bg, -0.04f);
         setColor(p, "disabledForegroundColor", fg, -0.4f);
-        
+
         // Menu
         setColor(p, "menuForegroundColor", lighterFg);
         setColor(p, "menuBackgroundColor", bg, menuBgC);
         setColor(p, "menuSelectionForegroundColor", lighterFg, 0.4f * contrastLight);
         setColor(p, "menuSelectionBackgroundColor", bg, 0.2f * contrastLight);
-        
+
         Color controlColor = changeColor(bg, controlBgC);
         Color buttonColor = changeColor(bg, buttonBgC);
         // Buttons
         setColorG(p, "buttonColor", buttonColor, 0, gradient);
         setColor(p, "buttonForegroundColor", lighterFg);
         setColorG(p, "pressedBackgroundColor", buttonColor, 0.05f, gradient);
-        
+
         // Buttons/Tabs
         setColor(p, "rolloverForegroundColor", lighterFg, 0.4f * contrastLight);
         setColorG(p, "rolloverColor", controlColor, 0.1f * contrastLight, gradient*1.4f);
-        
+
         // Input
         setColor(p, "inputForegroundColor", fg, 0f);
         setColor(p, "selectionBackgroundColor", bg, 0.2f);
         Color inputBg = changeColor(bg, 0.07f * contrastLight);
         setColor(p, "inputBackgroundColor", inputBg);
         setColor(p, "focusBackgroundColor", inputBg);
-        
+
         // Tabs and other
         setColor(p, "controlForegroundColor", lighterFg);
         setColorG(p, "controlColor", controlColor, 0, gradient*1.05f);
@@ -586,11 +586,11 @@ public class LaF {
         setColorG(p, "selectionBackgroundColor", changeColor(controlColor, 0.15f * contrastLighter), 0, gradient*1.7f);
         p.put("tabSeparatorStyle", String.valueOf(tabSeparatorStyle));
     }
-    
+
     private static void setColor(Properties p, String property, Color base, float offset) {
         setColor(p, property, changeColor(base, offset));
     }
-    
+
     private static void setColorG(Properties p, String property, Color base, float offset, float offsetG) {
         Color offsetBase = changeColor(base, offset);
         // For gradient, make color both a bit darker and lighter
@@ -600,23 +600,23 @@ public class LaF {
         // For testing
 //        setColorG(p, property, ColorCorrectionNew.makeBrighter(offsetBase, offsetG), offsetBase);
     }
-    
+
     private static void setColor(Properties p, String property, Color color) {
         p.put(property, String.format("%d %d %d", color.getRed(), color.getGreen(), color.getBlue()));
     }
-    
+
     private static void setColorG(Properties p, String property, Color cl, Color cd) {
         p.put(property+"Light", String.format("%d %d %d", cl.getRed(), cl.getGreen(), cl.getBlue()));
         p.put(property+"Dark", String.format("%d %d %d", cd.getRed(), cd.getGreen(), cd.getBlue()));
     }
-    
+
     /**
      * An explicit -change (darker) or +change (brighter), independant of what
      * the color currently is.
-     * 
+     *
      * @param color
      * @param change
-     * @return 
+     * @return
      */
     private static Color changeColor(Color color, float change) {
         if (change > 1) {
@@ -630,5 +630,5 @@ public class LaF {
         }
         return ColorCorrectionNew.makeBrighter(color, change);
     }
-    
+
 }

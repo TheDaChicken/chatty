@@ -3,13 +3,13 @@ package chatty.gui;
 
 import chatty.Helper;
 import chatty.gui.components.textpane.ChannelTextPane;
-import chatty.lang.Language;
 import chatty.util.Debugging;
 import chatty.util.MiscUtil;
 import chatty.util.ProcessManager;
 import chatty.util.StringUtil;
 import chatty.util.commands.CustomCommand;
 import chatty.util.commands.Parameters;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -57,7 +57,6 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
 import javax.swing.JRootPane;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
@@ -666,8 +665,8 @@ public class GuiUtil {
         DocumentFilter filter = new DocumentFilter() {
             
             @Override
-            public void replace(DocumentFilter.FilterBypass fb, int offset,
-                    int delLength, String text, AttributeSet attrs) throws BadLocationException {
+            public void replace(FilterBypass fb, int offset,
+                                int delLength, String text, AttributeSet attrs) throws BadLocationException {
                 if (text == null || text.isEmpty()) {
                     super.replace(fb, offset, delLength, text, attrs);
                 } else {

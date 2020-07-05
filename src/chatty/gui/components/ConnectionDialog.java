@@ -4,6 +4,8 @@ package chatty.gui.components;
 import chatty.gui.GuiUtil;
 import chatty.gui.MainGui;
 import chatty.lang.Language;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -189,7 +191,7 @@ public class ConnectionDialog extends JDialog {
         updateChannels();
     }
     
-    public void update(String currentPassword, String currentToken, boolean usePasswordInstead) {
+    public void update(String currentPassword, GoogleCredential currentToken, boolean usePasswordInstead) {
         if (usePasswordInstead) {
             // Using password
             password.setEditable(true);
@@ -202,7 +204,7 @@ public class ConnectionDialog extends JDialog {
             // Using access token
             remove(password);
             remove(passwordLabel);
-            if (currentUsername.isEmpty() || currentToken.isEmpty()) {
+            if (currentUsername.isEmpty() || currentToken == null) {
                 name.setText(Language.getString("connect.none"));
                 getToken.setText(Language.getString("connect.button.createLogin"));
             }

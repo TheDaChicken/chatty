@@ -54,7 +54,6 @@ public class Room {
     private Room(String channel, String id, String name, String ownerId,
             String ownerChannel, String customName, String topic) {
         //System.out.println(channel);
-        channel = StringUtil.toLowerCase(channel);
         this.isOwner = !channel.startsWith("#chatrooms:");
         this.isChatroom = channel.startsWith("#chatrooms:");
         this.channel = channel;

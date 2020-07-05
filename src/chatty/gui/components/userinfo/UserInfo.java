@@ -11,8 +11,7 @@ import static chatty.gui.components.userinfo.Util.makeGbc;
 import chatty.lang.Language;
 import chatty.util.MiscUtil;
 import chatty.util.api.ChannelInfo;
-import chatty.util.api.Follower;
-import chatty.util.api.TwitchApi;
+import chatty.util.api.YouTubeApi;
 import chatty.util.commands.CustomCommand;
 import chatty.util.commands.Parameters;
 import chatty.util.settings.Settings;
@@ -188,7 +187,7 @@ public class UserInfo extends JDialog {
                         break;
                     case "refresh":
                         infoPanel.setRefreshingFollowAge();
-                        getFollowInfo(true);
+                        //getFollowInfo(true);
                         break;
                     case "copyChannelInfo":
                         MiscUtil.copyToClipboard(infoPanel.getChannelInfoTooltipText());
@@ -374,11 +373,8 @@ public class UserInfo extends JDialog {
         if (categories != null && !categories.isEmpty()) {
             categoriesString = categories.toString();
         }
-        String displayNickInfo = user.hasDisplayNickSet() ? "" : "*";
         this.setTitle(Language.getString("userDialog.title")+" "+user.toString()
-                +(user.hasCustomNickSet() ? " ("+user.getDisplayNick()+")" : "")
-                +(!user.hasRegularDisplayNick() ? " ("+user.getName()+")" : "")
-                +displayNickInfo
+                +(user.hasCustomNickSet() ? " ("+user.getName()+")" : "")
                 +" / "+user.getRoom().getDisplayName()
                 +" "+categoriesString);
         updateMessages();
@@ -470,25 +466,6 @@ public class UserInfo extends JDialog {
     protected ChannelInfo getChannelInfo() {
         if (requester != null) {
             return requester.getCachedChannelInfo(currentUser.getName(), currentUser.getId());
-        }
-        return null;
-    }
-
-    public void setFollowInfo(String stream, String user, Follower follow, TwitchApi.RequestResultCode result) {
-        if (currentUser == null || !currentUser.getName().equals(user)
-                || !Objects.equals(currentUser.getStream(), stream)) {
-            return;
-        }
-        infoPanel.setFollowInfo(follow, result);
-    }
-
-    protected Follower getFollowInfo(boolean refresh) {
-        if (requester != null) {
-            return requester.getSingleFollower(currentUser.getStream(),
-                    currentUser.getRoom().getStreamId(),
-                    currentUser.getName(),
-                    currentUser.getId(),
-                    refresh);
         }
         return null;
     }

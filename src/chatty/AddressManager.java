@@ -41,7 +41,7 @@ public class AddressManager {
      * @param portsString The port(s) to connect to.
      * @return The {@code InetSocketAddress} or {@code null} if either the host
      * or ports are invalid
-     * @throws java.net.UnknownHostException If the host could not be resolved
+     * @throws UnknownHostException If the host could not be resolved
      */
     public InetSocketAddress getAddress(String host, String portsString) throws UnknownHostException {
         List<Integer> ports = parsePorts(portsString);

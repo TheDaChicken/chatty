@@ -71,9 +71,10 @@ public class AttachedWindowManager {
                 for (Component comp : components) {
                     temp2.x = comp.getX() + movedX;
                     temp2.y = comp.getY() + movedY;
-                    if (GuiUtil.isPointOnScreen(temp2, comp.getWidth() / 2, 10)) {
-                        comp.setLocation(temp2);
-                    }
+                    // TODO 5
+                    //if (GuiUtil.isPointOnScreen(temp2, comp.getWidth() / 2, 10)) {
+                    //    comp.setLocation(temp2);
+                    //}
                 }
             }
         });

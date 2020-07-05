@@ -11,8 +11,7 @@ import chatty.util.DateTime;
 import chatty.util.Debugging;
 import chatty.util.StringUtil;
 import chatty.util.api.ChannelInfo;
-import chatty.util.api.Follower;
-import chatty.util.api.TwitchApi;
+import chatty.util.api.YouTubeApi;
 import chatty.util.commands.CustomCommand;
 import java.awt.Color;
 import java.awt.Component;
@@ -51,7 +50,6 @@ public class InfoPanel extends JPanel {
 
     private User currentUser;
     private ChannelInfo currentChannelInfo;
-    private Follower currentFollower;
     
     public InfoPanel(UserInfo owner, ContextMenuListener listener) {
         this.owner = owner;
@@ -179,14 +177,8 @@ public class InfoPanel extends JPanel {
         }
         
         // Follower Info
-        Follower follow = owner.getFollowInfo(false);
-        currentFollower = null;
-        if (follow == null) {
-            followedAt.setText(Language.getString("userDialog.loading"));
-            followedAt.setToolTipText(null);
-        } else {
-            setFollowInfo(follow, TwitchApi.RequestResultCode.SUCCESS);
-        }
+        followedAt.setText(Language.getString("userDialog.loading"));
+        followedAt.setToolTipText(null);
         
         // For button containing $(followage) and such
         owner.updateButtons();
@@ -244,28 +236,6 @@ public class InfoPanel extends JPanel {
         }
         infoLabelSize.check();
     }
-
-    public void setFollowInfo(Follower follower, TwitchApi.RequestResultCode result) {
-        if (result == TwitchApi.RequestResultCode.SUCCESS && follower.follow_time != -1) {
-            followedAt.setText(new String[]{
-                Language.getString("userDialog.followed",formatAgoTime(follower.follow_time, false)),
-                Language.getString("userDialog.followed",formatAgoTime(follower.follow_time, true))
-            });
-            followedAt.setToolTipText(Language.getString("userDialog.followed.tip",
-                    formatAgoTimeVerbose(follower.follow_time),
-                    DateTime.formatFullDatetime(follower.follow_time)));
-            currentFollower = follower;
-        } else if (result == TwitchApi.RequestResultCode.NOT_FOUND) {
-            followedAt.setText(Language.getString("userDialog.notFollowing"));
-            followedAt.setToolTipText(null);
-        } else {
-            followedAt.setText(Language.getString("userDialog.error"));
-            followedAt.setToolTipText(null);
-        }
-        // For button containing $(followage) and such
-        owner.updateButtons();
-        infoLabelSize.check();
-    }
     
     private String formatAgoTime(long time, boolean compact) {
         return DateTime.formatAccountAgeCompact(time, compact);
@@ -276,16 +246,10 @@ public class InfoPanel extends JPanel {
     }
     
     protected String getFollowAge() {
-        if (currentFollower != null) {
-            return formatAgoTimeVerbose(currentFollower.follow_time);
-        }
         return null;
     }
     
     protected String getFollowDate() {
-        if (currentFollower != null) {
-            return DateTime.formatFullDatetime(currentFollower.follow_time);
-        }
         return null;
     }
     

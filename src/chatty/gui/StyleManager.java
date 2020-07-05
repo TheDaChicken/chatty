@@ -1,10 +1,10 @@
 
 package chatty.gui;
 
+import chatty.gui.components.textpane.MyStyleConstants;
 import chatty.util.colors.HtmlColors;
 import chatty.gui.components.textpane.ChannelTextPane.Attribute;
 import chatty.gui.components.textpane.ChannelTextPane.Setting;
-import chatty.gui.components.textpane.MyStyleConstants;
 import chatty.util.DateTime;
 import chatty.util.colors.ColorCorrector;
 import chatty.util.settings.Settings;

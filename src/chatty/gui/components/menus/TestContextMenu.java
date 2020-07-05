@@ -1,14 +1,12 @@
 
 package chatty.gui.components.menus;
 
-import chatty.Helper;
 import chatty.gui.GuiUtil;
 import chatty.gui.components.settings.CommandSettings;
 import chatty.util.StringUtil;
 import chatty.util.commands.CustomCommand;
 import java.awt.event.ActionEvent;
 import java.util.List;
-import javax.swing.JDialog;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 

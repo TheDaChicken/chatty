@@ -22,7 +22,7 @@ public class AutoModMessage extends InfoMessage {
     
     private static String makeText(User user, String message) {
         return String.format("[AutoMod] <%s> %s",
-                user.getDisplayNick(),
+                user.getName(),
                 message);
     }
     

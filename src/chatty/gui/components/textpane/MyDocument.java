@@ -21,7 +21,7 @@ class MyDocument extends DefaultStyledDocument {
     }
     
     public void refresh(int offset, int len) {
-        DefaultDocumentEvent changes = new AbstractDocument.DefaultDocumentEvent(offset,len, DocumentEvent.EventType.CHANGE);
+        DefaultDocumentEvent changes = new DefaultDocumentEvent(offset,len, DocumentEvent.EventType.CHANGE);
         Element root = getDefaultRootElement();
         Element[] removed = new Element[0];
         Element[] added = new Element[0];

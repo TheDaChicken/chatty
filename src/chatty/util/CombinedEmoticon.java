@@ -54,7 +54,7 @@ public class CombinedEmoticon extends Emoticon {
     public static CombinedEmoticon create(List<Emoticon> emotes, String code) {
         Debugging.println("combinedemotes", "Create: %s", emotes);
         Emoticon base = emotes.get(0);
-        Emoticon.Builder b = new Emoticon.Builder(base.type, code, base.url);
+        Builder b = new Builder(base.type, code, base.url);
         b.setStringId(base.stringId);
         b.setStringIdAlias(base.stringIdAlias);
         b.setLiteral(base.literal);

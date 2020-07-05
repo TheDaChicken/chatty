@@ -15,13 +15,13 @@ import java.awt.Color;
  */
 public class MsgColorItem extends ColorItem {
 
-    private final Highlighter.HighlightItem search;
+    private final HighlightItem search;
     
     public MsgColorItem(String item,
             Color foreground, boolean foregroundEnabled,
             Color background, boolean backgroundEnabled) {
         super(item, foreground, foregroundEnabled, background, backgroundEnabled);
-        this.search = new Highlighter.HighlightItem(item);
+        this.search = new HighlightItem(item);
     }
     
     public boolean matches(HighlightItem.Type type, String text, String channel,

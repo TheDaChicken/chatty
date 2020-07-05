@@ -5,6 +5,7 @@ import chatty.User;
 import chatty.gui.Highlighter;
 import chatty.gui.Highlighter.HighlightItem.Type;
 import chatty.util.irc.MsgTags;
+
 import java.util.Objects;
 import java.util.Set;
 

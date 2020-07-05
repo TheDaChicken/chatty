@@ -112,8 +112,6 @@ public class Emoticons {
      */
     private final Set<Emoticon> globalTwitchEmotes = new HashSet<>();
     
-    private final CheersUtil cheers = new CheersUtil();
-    
     /**
      * Only other (FFZ/BTTV) global emotes.
      */
@@ -382,10 +380,6 @@ public class Emoticons {
         return globalTwitchEmotes;
     }
     
-    public Set<CheerEmoticon> getCheerEmotes() {
-        return cheers.get();
-    }
-    
     /**
      * Get a String with all Cheer emoticons, or just Cheer emoticons specific
      * to the given stream.
@@ -394,7 +388,7 @@ public class Emoticons {
      * @return 
      */
     public String getCheerEmotesString(String stream) {
-        return cheers.getString(stream);
+        return "";
     }
     
     public Set<Emoticon> getOtherGlobalEmotes() {
@@ -577,9 +571,6 @@ public class Emoticons {
      * @return true if the emote is ignored, false otherwise
      */
     public boolean isEmoteIgnored(Emoticon emote) {
-        if (emote instanceof CheerEmoticon) {
-            return ignoredEmotes.contains(((CheerEmoticon)emote).getSimpleCode());
-        }
         return ignoredEmotes.contains(emote.code);
     }
     
@@ -1067,17 +1058,5 @@ public class Emoticons {
         }
         return input;
     }
-    
-    public void setCheerEmotes(Set<CheerEmoticon> newCheerEmotes) {
-        cheers.add(newCheerEmotes);
-        LOGGER.info("Found "+newCheerEmotes.size()+" cheer emotes");
-    }
-    
-    public void setCheerState(String state) {
-        cheers.setState(state);
-    }
-    
-    public void setCheerBackground(Color color) {
-        cheers.setBackgroundColor(color);
-    }
+
 }

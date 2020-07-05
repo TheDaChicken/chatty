@@ -217,7 +217,7 @@ public class BackupManager extends JDialog {
         
         private final List<FileInfo> data = new ArrayList<>();
         
-        public void setData(List<FileManager.FileInfo> data) {
+        public void setData(List<FileInfo> data) {
             this.data.clear();
             this.data.addAll(data);
             super.fireTableDataChanged();

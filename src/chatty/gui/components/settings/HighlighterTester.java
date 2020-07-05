@@ -231,15 +231,15 @@ public class HighlighterTester extends JDialog implements StringEditor {
         doc.setDocumentFilter(new DocumentFilter() {
             
             @Override
-            public void insertString(DocumentFilter.FilterBypass fb, int offset, String string,
-                    AttributeSet attr) throws BadLocationException {
+            public void insertString(FilterBypass fb, int offset, String string,
+                                     AttributeSet attr) throws BadLocationException {
                 fb.insertString(offset, StringUtil.removeLinebreakCharacters(string), attr);
                 updateMatches((DefaultStyledDocument)fb.getDocument());
                 updateInfoText();
             }
             
             @Override
-            public void remove(DocumentFilter.FilterBypass fb, int offset, int length) throws
+            public void remove(FilterBypass fb, int offset, int length) throws
                     BadLocationException {
                 fb.remove(offset, length);
                 updateMatches((DefaultStyledDocument)fb.getDocument());
@@ -247,7 +247,7 @@ public class HighlighterTester extends JDialog implements StringEditor {
             }
 
             @Override
-            public void replace(DocumentFilter.FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
+            public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
                 fb.replace(offset, length, StringUtil.removeLinebreakCharacters(text), attrs);
                 updateMatches((DefaultStyledDocument)fb.getDocument());
                 updateInfoText();

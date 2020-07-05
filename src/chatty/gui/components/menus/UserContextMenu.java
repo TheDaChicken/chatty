@@ -1,7 +1,7 @@
 
 package chatty.gui.components.menus;
 
-import chatty.TwitchClient;
+import chatty.YouTubeClient;
 import chatty.User;
 import chatty.lang.Language;
 import chatty.util.UserRoom;
@@ -28,7 +28,7 @@ public class UserContextMenu extends ContextMenu {
     private static final String MISC_MENU = Language.getString("userCm.menu.misc");
     private static final String ROOMS_MENU = Language.getString("userCm.menu.openIn");
     
-    public static TwitchClient client;
+    public static YouTubeClient client;
     
     public UserContextMenu(User user, String msgId, String autoModMsgId,
             ContextMenuListener listener) {
@@ -37,7 +37,7 @@ public class UserContextMenu extends ContextMenu {
         this.msgId = msgId;
         this.autoModMsgId = autoModMsgId;
         
-        addItem("userinfo", Language.getString("userCm.user", user.getDisplayNick()));
+        addItem("userinfo", Language.getString("userCm.user", user.getName()));
         if (client != null) {
             List<UserRoom> rooms = client.getOpenUserRooms(user);
             Collections.sort(rooms);

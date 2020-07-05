@@ -7,8 +7,7 @@ import chatty.gui.GuiUtil;
 import chatty.gui.MainGui;
 import chatty.gui.components.menus.ContextMenuListener;
 import chatty.util.api.ChannelInfo;
-import chatty.util.api.Follower;
-import chatty.util.api.TwitchApi;
+import chatty.util.api.YouTubeApi;
 import chatty.util.commands.CustomCommand;
 import chatty.util.commands.Parameters;
 import chatty.util.settings.Settings;
@@ -77,10 +76,10 @@ public class UserInfoManager {
         };
         userInfoRequester = new UserInfoRequester() {
 
-            @Override
-            public Follower getSingleFollower(String stream, String streamId, String user, String userId, boolean refresh) {
-                return main.getSingleFollower(stream, streamId, user, userId, refresh);
-            }
+            //@Override
+            //public Follower getSingleFollower(String stream, String streamId, String user, String userId, boolean refresh) {
+            //   return main.getSingleFollower(stream, streamId, user, userId, refresh);
+            //}
 
             @Override
             public ChannelInfo getCachedChannelInfo(String channel, String id) {
@@ -109,12 +108,6 @@ public class UserInfoManager {
     public void setChannelInfo(String stream, ChannelInfo info) {
         for (UserInfo dialog : dialogs) {
             dialog.setChannelInfo(stream, info);
-        }
-    }
-
-    public void setFollowInfo(String stream, String user, TwitchApi.RequestResultCode result, Follower follow) {
-        for (UserInfo dialog : dialogs) {
-            dialog.setFollowInfo(stream, user, follow, result);
         }
     }
     

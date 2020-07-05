@@ -115,7 +115,7 @@ public class Buttons {
             JButton button = new JButton(item.getLabel());
             button.addActionListener(listener);
             button.setToolTipText("<html><body><p style='font-family:monospaced;'>"
-                    +CommandSettings.formatCommandInfo(item.getCommand().toString()));
+                    + CommandSettings.formatCommandInfo(item.getCommand().toString()));
             commands.put(button, item.getCommand());
             
             boolean secondaryButton = false;

@@ -1,7 +1,6 @@
 
 package chatty.gui.components.menus;
 
-import chatty.gui.components.LiveStreamsDialog;
 import chatty.lang.Language;
 import chatty.util.api.StreamInfo;
 import java.awt.event.ActionEvent;
@@ -39,10 +38,6 @@ public class StreamInfosContextMenu extends ContextMenu {
             }
         }
         if (liveStreams) {
-            for (LiveStreamsDialog.Sorting s : LiveStreamsDialog.Sorting.values()) {
-                addRadioItem("sort_"+s.key, s.getLabel(), SORT_GROUP, SORT_SUBMENU);
-                getItem("sort_"+s.key).setToolTipText(s.getToolTipText());
-            }
             addSeparator(SORT_SUBMENU);
             addCheckboxItem("sortOption_favFirst", Language.getString("streams.sortingOption.fav"), SORT_SUBMENU, favFirst);
             getItem("sortOption_favFirst").setToolTipText(Language.getString("streams.sortingOption.fav.tip"));

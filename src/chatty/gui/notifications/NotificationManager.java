@@ -19,17 +19,13 @@ import chatty.gui.notifications.Notification.Type;
 import chatty.gui.notifications.Notification.TypeOption;
 import chatty.util.DateTime;
 import chatty.util.Sound;
-import chatty.util.api.Follower;
-import chatty.util.api.FollowerInfo;
 import chatty.util.api.StreamInfo;
 import chatty.util.irc.MsgTags;
 import chatty.util.settings.Settings;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  *
@@ -240,23 +236,7 @@ public class NotificationManager {
             return new NotificationData(title, "");
         });
     }
-    
-    public void newFollowers(FollowerInfo info) {
-        String channel = Helper.toChannel(info.stream);
-        check(Type.NEW_FOLLOWERS, channel, c -> {
-            String title = String.format("[New Followers] %s",
-                    channel);
-            StringBuilder b = new StringBuilder();
-            for (Follower f : info.getNewFollowers()) {
-                if (b.length() > 0) {
-                    b.append(", ");
-                }
-                b.append(f.display_name);
-            }
-            return new NotificationData(title, b.toString());
-        });
-    }
-    
+
     public void newSubscriber(User user, User localUser, String systemMsg, String message) {
         final String text;
         if (message != null && !message.isEmpty()) {
@@ -266,7 +246,7 @@ public class NotificationManager {
         }
         check(Type.SUBSCRIBER, user.getChannel(), user, localUser, text, c -> {
             String title = String.format("[Subscriber] %s in %s",
-                    user.getDisplayNick(),
+                    user.getName(),
                     user.getChannel());
             return new NotificationData(title, text);
         });

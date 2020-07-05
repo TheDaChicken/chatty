@@ -3,7 +3,9 @@ package chatty.util.api;
 
 import chatty.Room;
 import chatty.util.api.usericons.Usericon;
-import chatty.util.api.TwitchApi.RequestResultCode;
+import chatty.util.api.YouTubeApi.RequestResultCode;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+
 import java.util.List;
 import java.util.Set;
 
@@ -13,19 +15,16 @@ import java.util.Set;
  * @author tduva
  */
 public interface TwitchApiResultListener {
-    void receivedEmoticons(EmoticonUpdate emoteUpdate);
-    void receivedCheerEmoticons(Set<CheerEmoticon> emoticons);
+    //void receivedEmoticons(EmoticonUpdate emoteUpdate);
+    //void receivedCheerEmoticons(Set<CheerEmoticon> emoticons);
     void receivedUsericons(List<Usericon> icons);
-    void tokenVerified(String token, TokenInfo tokenInfo);
+    void tokenVerified(GoogleCredential credential, TokenInfo tokenInfo);
     void tokenRevoked(String error);
     void runCommercialResult(String stream, String text, RequestResultCode result);
     void putChannelInfoResult(RequestResultCode result);
     void receivedChannelInfo(String channel, ChannelInfo info, RequestResultCode result);
     void accessDenied();
-    void receivedFollowers(FollowerInfo followerInfo);
-    void newFollowers(FollowerInfo followerInfo);
-    void receivedSubscribers(FollowerInfo info);
-    void receivedFollower(String stream, String username, RequestResultCode result, Follower follower);
+    //void receivedFollower(String stream, String username, RequestResultCode result, Follower follower);
     /**
      * The correctly capitalized name for a user.
      * 

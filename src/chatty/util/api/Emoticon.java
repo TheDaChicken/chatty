@@ -886,10 +886,7 @@ public class Emoticon {
                 && (accessToSets == null || !accessToSets.contains(emoteset))) {
             return false;
         }
-        if (hasStreamRestrictions()
-                && !streamRestrictionContains(user.getStream())) {
-            return false;
-        }
+        // TODO when user gets stream - 60
         return true;
     }
     

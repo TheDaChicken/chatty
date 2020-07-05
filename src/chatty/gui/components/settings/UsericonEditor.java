@@ -44,7 +44,7 @@ import javax.swing.text.PlainDocument;
  */
 class UsericonEditor extends TableEditor<Usericon> {
     
-    private static final Map<Usericon.Type, String> typeNames;
+    private static final Map<Type, String> typeNames;
     
     private final MyItemEditor editor;
     
@@ -64,28 +64,28 @@ class UsericonEditor extends TableEditor<Usericon> {
      */
     static {
         typeNames = new LinkedHashMap<>();
-        typeNames.put(Usericon.Type.ADDON, "Addon");
-        typeNames.put(Usericon.Type.MOD, "Moderator");
-        typeNames.put(Usericon.Type.VIP, "VIP");
-        typeNames.put(Usericon.Type.SUB, "Subscriber");
-        typeNames.put(Usericon.Type.BROADCASTER, "Broadcaster");
-        typeNames.put(Usericon.Type.BOT, "Bot");
-        typeNames.put(Usericon.Type.TWITCH, "Other (Twitch)");
-        typeNames.put(Usericon.Type.OTHER, "Other (Third-Party)");
-        typeNames.put(Usericon.Type.HL, "Highlighted (by points)");
-        typeNames.put(Usericon.Type.TURBO, "Turbo");
-        typeNames.put(Usericon.Type.PRIME, "Prime");
-        typeNames.put(Usericon.Type.BITS, "Bits");
-        typeNames.put(Usericon.Type.ADMIN, "Admin");
-        typeNames.put(Usericon.Type.STAFF, "Staff");
-        typeNames.put(Usericon.Type.GLOBAL_MOD, "Global Moderator");
+        typeNames.put(Type.ADDON, "Addon");
+        typeNames.put(Type.MOD, "Moderator");
+        typeNames.put(Type.VIP, "VIP");
+        typeNames.put(Type.SUB, "Subscriber");
+        typeNames.put(Type.BROADCASTER, "Broadcaster");
+        typeNames.put(Type.BOT, "Bot");
+        typeNames.put(Type.TWITCH, "Other (Twitch)");
+        typeNames.put(Type.OTHER, "Other (Third-Party)");
+        typeNames.put(Type.HL, "Highlighted (by points)");
+        typeNames.put(Type.TURBO, "Turbo");
+        typeNames.put(Type.PRIME, "Prime");
+        typeNames.put(Type.BITS, "Bits");
+        typeNames.put(Type.ADMIN, "Admin");
+        typeNames.put(Type.STAFF, "Staff");
+        typeNames.put(Type.GLOBAL_MOD, "Global Moderator");
     }
     
     public void setTwitchBadgeTypes(Set<String> types) {
         editor.setTwitchBadgeTypes(types);
     }
     
-    public void addUsericonOfBadgeType(Usericon.Type type, String idVersion) {
+    public void addUsericonOfBadgeType(Type type, String idVersion) {
         Usericon usericon = UsericonFactory.createCustomIcon(type, idVersion, "", "", "", "");
         addItem(usericon);
     }
@@ -108,7 +108,7 @@ class UsericonEditor extends TableEditor<Usericon> {
         public Object getValueAt(int rowIndex, int columnIndex) {
             Usericon icon = get(rowIndex);
             if (columnIndex == 0) {
-                if (icon.type == Usericon.Type.TWITCH) {
+                if (icon.type == Type.TWITCH) {
                     return "["+icon.getIdAndVersion()+"]";
                 } else if (!icon.badgeType.isEmpty()) {
                     return getTypeName(icon.type)+" ["+icon.badgeType+"]";
@@ -299,8 +299,8 @@ class UsericonEditor extends TableEditor<Usericon> {
 
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    if (type.getSettingValue() == Usericon.Type.TWITCH
-                            || type.getSettingValue() == Usericon.Type.OTHER) {
+                    if (type.getSettingValue() == Type.TWITCH
+                            || type.getSettingValue() == Type.OTHER) {
                         idVersion.setEnabled(true);
                     } else {
                         idVersion.setEnabled(false);

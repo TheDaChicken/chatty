@@ -16,9 +16,9 @@ public class Shutdown implements Runnable {
     
     private static final Logger LOGGER = Logger.getLogger(Shutdown.class.getName());
 
-    private final TwitchClient client;
+    private final YouTubeClient client;
     
-    public Shutdown(TwitchClient client) {
+    public Shutdown(YouTubeClient client) {
         this.client = client;
     }
     
@@ -28,6 +28,6 @@ public class Shutdown implements Runnable {
         System.out.println("Shutdown");
         
         client.saveSettings(true, false);
-        client.chatLog.close();
+        //client.chatLog.close();
     }
 }

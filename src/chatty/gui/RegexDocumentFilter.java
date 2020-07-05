@@ -20,7 +20,7 @@ public class RegexDocumentFilter extends DocumentFilter {
     }
     
     @Override
-    public void insertString(DocumentFilter.FilterBypass fb, int off, String str, AttributeSet attr) {
+    public void insertString(FilterBypass fb, int off, String str, AttributeSet attr) {
         try {
             fb.insertString(off, pattern.matcher(str).replaceAll(""), attr);
         } catch (BadLocationException | NullPointerException ex) {
@@ -29,7 +29,7 @@ public class RegexDocumentFilter extends DocumentFilter {
     }
 
     @Override
-    public void replace(DocumentFilter.FilterBypass fb, int off, int len, String str, AttributeSet attr) {
+    public void replace(FilterBypass fb, int off, int len, String str, AttributeSet attr) {
         try {
             if (str == null) {
                 fb.replace(off, len, str, attr);

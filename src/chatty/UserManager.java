@@ -3,7 +3,6 @@ package chatty;
 
 import chatty.gui.colors.UsercolorManager;
 import chatty.util.api.usericons.UsericonManager;
-import chatty.util.BotNameManager;
 import chatty.util.StringUtil;
 import chatty.util.settings.Settings;
 import java.util.Map.Entry;
@@ -29,7 +28,7 @@ public class UserManager {
     
     private final Set<UserManagerListener> listeners = new HashSet<>();
     
-    private volatile String localUsername;
+    private volatile String localChannelID;
     public final User specialUser = new User("[specialUser]", Room.createRegular("[nochannel]"));
     
     private final HashMap<String, HashMap<String, User>> users = new HashMap<>();
@@ -45,7 +44,6 @@ public class UserManager {
     private UsericonManager usericonManager;
     private UsercolorManager usercolorManager;
     private Addressbook addressbook;
-    private BotNameManager botNameManager;
     private Settings settings;
     
     public UserManager() {
@@ -59,34 +57,8 @@ public class UserManager {
         }, CLEAR_MESSAGES_TIMER, CLEAR_MESSAGES_TIMER);
     }
     
-    public void setLocalUsername(String username) {
-        this.localUsername = username;
-    }
-    
-    public void setBotNameManager(BotNameManager m) {
-        this.botNameManager = m;
-        m.addListener(new BotNameManager.BotNameListener() {
-
-            private void setUserBot(User user) {
-                if (user.setBot(true)) {
-                    userUpdated(user);
-                }
-            }
-            
-            @Override
-            public void botNameAdded(String channel, String botName) {
-                if (channel == null) {
-                    for (User user : getUsersByName(botName)) {
-                        setUserBot(user);
-                    }
-                } else {
-                    User user = getUserIfExists(channel, botName);
-                    if (user != null) {
-                        setUserBot(user);
-                    }
-                }
-            }
-        });
+    public void setLocalChannelID(String channelID) {
+        this.localChannelID = channelID;
     }
     
     public void addListener(UserManagerListener listener) {
@@ -204,51 +176,33 @@ public class UserManager {
      * @return The matching User object
      * @see User
      */
-    public synchronized User getUser(Room room, String name) {
+    public synchronized User getUser(Room room, String channel_id, String name) {
         // Not sure if this makes sense
-        if (name == null || name.isEmpty()) {
+        if (channel_id == null || channel_id.isEmpty()) {
             return errorUser;
         }
-        name = StringUtil.toLowerCase(name);
-        User user = getUserIfExists(room.getChannel(), name);
+        User user = getUserIfExists(room.getChannel(), channel_id);
         if (user == null) {
-            // Capitalize name if enabled (might still be overwritten by setting
-            // displayNick from tags)
-            String capitalizedName = name;
-            if (capitalizedNames) {
-                capitalizedName = name.substring(0, 1).toUpperCase(Locale.ROOT) + name.substring(1);
-            }
-            user = new User(capitalizedName, room);
+            user = new User(channel_id, name, room);
             user.setUsercolorManager(usercolorManager);
             user.setAddressbook(addressbook);
             user.setUsericonManager(usericonManager);
-            if (customNamesManager != null) {
-                user.setCustomNick(customNamesManager.getCustomName(name));
-            }
-            if (botNameManager != null && botNameManager.isBotName(room.getOwnerChannel(), name)) {
-                user.setBot(true);
-            }
             // Initialize some values if present for this name
-            if (cachedColors.containsKey(name)) {
-                user.setColor(cachedColors.get(name));
+            if (cachedColors.containsKey(channel_id)) {
+                user.setColor(cachedColors.get(channel_id));
             }
-            if (name.equals(localUsername)) {
+            if (channel_id.equals(localChannelID)) {
                 /**
                  * Set initial data for local user that is globally valid. This
                  * data would have been received from the GLOBALUSERSTATE
                  * command which may not be send after every join or sent
                  * message.
                  */
-                user.setAdmin(specialUser.isAdmin());
                 user.setStaff(specialUser.isStaff());
-                user.setTurbo(specialUser.hasTurbo());
                 user.setId(specialUser.getId());
                 user.setLocalUser(true);
                 if (!specialUser.hasDefaultColor()) {
                     user.setColor(specialUser.getPlainColor());
-                }
-                if (specialUser.hasDisplayNickSet()) {
-                    user.setDisplayNick(specialUser.getDisplayNick());
                 }
             }
             // Put User into the map for the channel
@@ -386,7 +340,7 @@ public class UserManager {
         List<User> changedUsers = new ArrayList<>();
         for (String userName : modsList) {
             if (Helper.isValidChannel(userName)) {
-                User user = getUser(room, userName);
+                User user = getUser(room, userName, null);
                 if (user.setModerator(true)) {
                     userUpdated(user);
                 }

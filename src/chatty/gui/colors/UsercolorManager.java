@@ -114,9 +114,7 @@ public class UsercolorManager {
                     return item.color;
                 }
             } else if (item.type == UsercolorItem.TYPE_STATUS) {
-                if (Helper.matchUserStatus(item.id, user)) {
-                    return item.color;
-                }
+                return item.color;
             } else if (item.type == UsercolorItem.TYPE_CATEGORY) {
                 if (user.hasCategory(item.category)) {
                     return item.color;

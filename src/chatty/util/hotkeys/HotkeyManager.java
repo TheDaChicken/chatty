@@ -451,11 +451,11 @@ public class HotkeyManager {
             }
             
             // Optional data with default values
-            Type type = Hotkey.Type.REGULAR;
+            Type type = Type.REGULAR;
             String custom = "";
             int delay = 0;
             if (list.size() > 2) {
-                type = Hotkey.Type.getTypeFromId(((Number)list.get(2)).intValue());
+                type = Type.getTypeFromId(((Number)list.get(2)).intValue());
             }
             if (list.size() > 3) {
                 custom = (String)list.get(3);
@@ -554,7 +554,7 @@ public class HotkeyManager {
         }
         KeyStroke keyStroke = KeyStroke.getKeyStrokeForEvent(e);
         for (Hotkey hotkey : hotkeys) {
-            if (hotkey.type == Hotkey.Type.APPLICATION && hotkey.keyStroke.equals(keyStroke)) {
+            if (hotkey.type == Type.APPLICATION && hotkey.keyStroke.equals(keyStroke)) {
                 HotkeyAction action = actions.get(hotkey.actionId);
                 if (action != null && hotkey.shouldExecuteAction()) {
                     action.action.actionPerformed(new ActionEvent(action, 0, hotkey.custom));

@@ -111,15 +111,7 @@ public class ChatLog {
     }
     
     public void bits(String channel, User user, int amount) {
-        if (amount <= 0) {
-            return;
-        }
-        if (isSettingEnabled("logBits") && isChanEnabled(channel)) {
-            writeLine(channel, String.format("%sBITS: %s (%d)",
-                    timestamp(),
-                    user.getRegularDisplayNick(),
-                    amount));
-        }
+
     }
     
     public void message(String channel, User user, String message, boolean action) {

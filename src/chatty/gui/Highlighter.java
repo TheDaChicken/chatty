@@ -12,6 +12,7 @@ import chatty.util.Pair;
 import chatty.util.StringUtil;
 import chatty.util.api.usericons.BadgeType;
 import chatty.util.irc.MsgTags;
+
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -693,12 +694,12 @@ public class Highlighter {
                 addUserItem("Any of Twitch Badge", badges, user -> {
                     for (BadgeType type : badges) {
                         if (type.version == null) {
-                            if (user.hasTwitchBadge(type.id)) {
+                            if (user.hasBadge(type.id)) {
                                 return true;
                             }
                         }
                         else {
-                            if (user.hasTwitchBadge(type.id, type.version)) {
+                            if (user.hasBadge(type.id, type.version)) {
                                 return true;
                             }
                         }
@@ -1254,22 +1255,13 @@ public class Highlighter {
             if (req.contains(Status.SUBSCRIBER) && user.isSubscriber()) {
                 return or;
             }
-            if (req.contains(Status.ADMIN) && user.isAdmin()) {
-                return or;
-            }
             if (req.contains(Status.STAFF) && user.isStaff()) {
                 return or;
             }
             if (req.contains(Status.BROADCASTER) && user.isBroadcaster()) {
                 return or;
             }
-            if (req.contains(Status.TURBO) && user.hasTurbo()) {
-                return or;
-            }
             if (req.contains(Status.GLOBAL_MOD) && user.isGlobalMod()) {
-                return or;
-            }
-            if (req.contains(Status.BOT) && user.isBot()) {
                 return or;
             }
             if (req.contains(Status.ANY_MOD) && user.hasModeratorRights()) {

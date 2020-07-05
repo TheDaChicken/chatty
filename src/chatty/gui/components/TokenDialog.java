@@ -4,6 +4,8 @@ package chatty.gui.components;
 import chatty.gui.MainGui;
 import chatty.lang.Language;
 import chatty.util.api.TokenInfo;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -44,7 +46,7 @@ public class TokenDialog extends JDialog {
     private final JButton done = new JButton(Language.getString("dialog.button.close"));
     
     private String currentUsername = "";
-    private String currentToken = "";
+    private GoogleCredential currentGoogleCredential = null;
     
     public TokenDialog(MainGui owner) {
         super(owner, Language.getString("login.title"), true);
@@ -132,7 +134,7 @@ public class TokenDialog extends JDialog {
     }
     
     public void update() {
-        boolean empty = currentUsername.isEmpty() || currentToken.isEmpty();
+        boolean empty = currentUsername.isEmpty() || currentGoogleCredential == null;
         deleteToken.setVisible(!empty);
         requestToken.setVisible(empty);
         verifyToken.setVisible(!empty);
@@ -140,10 +142,10 @@ public class TokenDialog extends JDialog {
         pack();
     }
     
-    public void update(String username, String currentToken) {
+    public void update(String username, GoogleCredential currentToken) {
         this.currentUsername = username;
-        this.currentToken = currentToken;
-        if (currentUsername.isEmpty() || currentToken.isEmpty()) {
+        this.currentGoogleCredential = currentToken;
+        if (currentUsername.isEmpty() || currentToken == null) {
             name.setText(Language.getString("login.createLogin"));
         }
         else {
@@ -159,7 +161,7 @@ public class TokenDialog extends JDialog {
      * @param scopes
      */
     public void updateAccess(Collection<String> scopes) {
-        boolean empty = currentUsername.isEmpty() || currentToken.isEmpty();
+        boolean empty = currentUsername.isEmpty() || currentGoogleCredential == null;
         access.setVisible(!empty);
         accessLabel.setVisible(!empty);
 

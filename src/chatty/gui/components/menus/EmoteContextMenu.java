@@ -7,8 +7,6 @@ import static chatty.gui.components.menus.ContextMenuHelper.ICON_IMAGE;
 import static chatty.gui.components.menus.ContextMenuHelper.ICON_WEB;
 import chatty.lang.Language;
 import chatty.util.StringUtil;
-import chatty.util.TwitchEmotesApi;
-import chatty.util.TwitchEmotesApi.EmotesetInfo;
 import chatty.util.api.Emoticon;
 import chatty.util.api.Emoticon.EmoticonImage;
 import chatty.util.api.Emoticons;
@@ -86,12 +84,12 @@ public class EmoteContextMenu extends ContextMenu {
         
         if (!emote.hasGlobalEmoteset()) {
             addSeparator();
-            EmotesetInfo info = TwitchEmotesApi.api.getInfoByEmote(unique, null, emote);
-            addItem("", TwitchEmotesApi.getEmoteType(emote, info, false));
-            if (info !=  null && info.stream_name != null && !info.stream_name.equals("Twitch")) {
-                emote.setStream(info.stream_name);
-                addStreamSubmenu(emote);
-            }
+            //EmotesetInfo info = TwitchEmotesApi.api.getInfoByEmote(unique, null, emote);
+            //addItem("", TwitchEmotesApi.getEmoteType(emote, info, false));
+            //if (info !=  null && info.stream_name != null && !info.stream_name.equals("Twitch")) {
+            //    emote.setStream(info.stream_name);
+            //    addStreamSubmenu(emote);
+            //}
         }
 
         addSeparator();

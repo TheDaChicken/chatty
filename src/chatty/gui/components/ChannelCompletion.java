@@ -117,7 +117,7 @@ public class ChannelCompletion implements AutoCompletionServer {
     }
 
     @Override
-    public AutoCompletionServer.CompletionItems getCompletionItems(String type, String prefix, String search) {
+    public CompletionItems getCompletionItems(String type, String prefix, String search) {
         updateSettings();
         String searchLower = StringUtil.toLowerCase(search);
         prefix = StringUtil.toLowerCase(prefix);
@@ -126,7 +126,7 @@ public class ChannelCompletion implements AutoCompletionServer {
         } else if (type.equals("special")) {
             return getSpecialItems(prefix, searchLower, search);
         }
-        return new AutoCompletionServer.CompletionItems();
+        return new CompletionItems();
     }
 
     /**
@@ -137,7 +137,7 @@ public class ChannelCompletion implements AutoCompletionServer {
      * @param searchCase Original search
      * @return
      */
-    private AutoCompletionServer.CompletionItems getRegularCompletionItems(String prefix, String search, String searchCase) {
+    private CompletionItems getRegularCompletionItems(String prefix, String search, String searchCase) {
         List<String> items;
         if (prefix.startsWith("/")
                 && (prefix.equals("/set ") || prefix.equals("/get ")
@@ -171,7 +171,7 @@ public class ChannelCompletion implements AutoCompletionServer {
      * @param search
      * @return
      */
-    private AutoCompletionServer.CompletionItems getSpecialItems(String prefix, String search, String searchCase) {
+    private CompletionItems getSpecialItems(String prefix, String search, String searchCase) {
         return getMainItems(main.getSettings().getString("completionTab2"), prefix, search, searchCase);
     }
 
@@ -183,7 +183,7 @@ public class ChannelCompletion implements AutoCompletionServer {
      * @param search
      * @return
      */
-    private AutoCompletionServer.CompletionItems getMainItems(String setting, String prefix, String search, String searchCase) {
+    private CompletionItems getMainItems(String setting, String prefix, String search, String searchCase) {
         boolean preferUsernames = prefixesPreferUsernames.contains(prefix)
                 && main.getSettings().getBoolean("completionPreferUsernames");
         String emotePrefix = settings().getString("completionEmotePrefix");
@@ -193,7 +193,7 @@ public class ChannelCompletion implements AutoCompletionServer {
             return getCompletionItemsNames(search, preferUsernames);
         }
         if (prefix.endsWith(".")) {
-            return AutoCompletionServer.CompletionItems.createFromStrings(getCustomCompletionItems(searchCase), ".");
+            return CompletionItems.createFromStrings(getCustomCompletionItems(searchCase), ".");
         }
         if (prefix.endsWith(":")) {
             if (emotePrefix.equals(":")) {
@@ -228,10 +228,10 @@ public class ChannelCompletion implements AutoCompletionServer {
             return getCompletionItemsEmotes(search, "");
         }
         if (setting.equals("custom")) {
-            return AutoCompletionServer.CompletionItems.createFromStrings(getCustomCompletionItems(searchCase), "");
+            return CompletionItems.createFromStrings(getCustomCompletionItems(searchCase), "");
         }
-        AutoCompletionServer.CompletionItems names = getCompletionItemsNames(search, preferUsernames);
-        AutoCompletionServer.CompletionItems emotes = getCompletionItemsEmotes(search, "");
+        CompletionItems names = getCompletionItemsNames(search, preferUsernames);
+        CompletionItems emotes = getCompletionItemsEmotes(search, "");
         if (setting.equals("both")) {
             names.append(emotes);
             return names;
@@ -241,7 +241,7 @@ public class ChannelCompletion implements AutoCompletionServer {
         }
     }
 
-    private AutoCompletionServer.CompletionItems getCompletionItemsEmotes(String search, String prefix) {
+    private CompletionItems getCompletionItemsEmotes(String search, String prefix) {
         Collection<Emoticon> allEmotes = new LinkedList<>(main.getUsableGlobalEmotes());
         allEmotes.addAll(main.getUsableEmotesPerStream(channel.getStreamName()));
         List<Emoticon> result = filterCompletionItems(allEmotes, search, SORT_EMOTES_BY_NAME, item -> {
@@ -288,8 +288,8 @@ public class ChannelCompletion implements AutoCompletionServer {
         return list;
     }
 
-    private AutoCompletionServer.CompletionItems getCompletionItemsEmoji(String search) {
-        List<AutoCompletionServer.CompletionItem> result = new LinkedList<>();
+    private CompletionItems getCompletionItemsEmoji(String search) {
+        List<CompletionItem> result = new LinkedList<>();
         Collection<Emoticon> searchResult = new LinkedHashSet<>();
         findEmoji(searchResult, code -> code.startsWith(":" + search));
         if (searchResult.size() < 20) {
@@ -309,7 +309,7 @@ public class ChannelCompletion implements AutoCompletionServer {
                 result.add(createEmoteItem(emote.code, null, emote));
             }
         }
-        return new AutoCompletionServer.CompletionItems(result, ":");
+        return new CompletionItems(result, ":");
     }
     
     private static final Comparator<Emoticon> EMOJI_SORTER = new Comparator<Emoticon>() {
@@ -430,7 +430,7 @@ public class ChannelCompletion implements AutoCompletionServer {
     private final UserSorterNew userSorterNew = new UserSorterNew();
     private final UserSorterAlphabetic userSorterAlphabetical = new UserSorterAlphabetic();
 
-    private AutoCompletionServer.CompletionItems getCompletionItemsNames(String search, boolean preferUsernames) {
+    private CompletionItems getCompletionItemsNames(String search, boolean preferUsernames) {
         List<User> matchedUsers = new ArrayList<>();
         Set<User> regularMatched = new HashSet<>();
         Set<User> customMatched = new HashSet<>();
@@ -471,23 +471,17 @@ public class ChannelCompletion implements AutoCompletionServer {
                     && (!includeAllNameTypesRestriction || matchedUsers.size() <= 2)) {
                 if (customMatched.contains(user) && !preferUsernames) {
                     nicks.add(user.getCustomNick());
-                    if (!user.hasRegularDisplayNick()) {
-                        nicks.add(user.getDisplayNick());
-                    }
                     if (user.hasCustomNickSet() && !user.getCustomNick().equalsIgnoreCase(user.getRegularDisplayNick())) {
                         nicks.add(user.getRegularDisplayNick());
                     }
                 } else if (localizedMatched.contains(user) && !preferUsernames) {
-                    nicks.add(user.getDisplayNick());
+                    nicks.add(user.getName());
                     if (user.hasCustomNickSet() && !user.getCustomNick().equalsIgnoreCase(user.getRegularDisplayNick())) {
                         nicks.add(user.getCustomNick());
                     }
                     nicks.add(user.getRegularDisplayNick());
                 } else {
                     nicks.add(user.getRegularDisplayNick());
-                    if (!user.hasRegularDisplayNick()) {
-                        nicks.add(user.getDisplayNick());
-                    }
                     if (user.hasCustomNickSet() && !user.getCustomNick().equalsIgnoreCase(user.getRegularDisplayNick())) {
                         nicks.add(user.getCustomNick());
                     }
@@ -496,18 +490,11 @@ public class ChannelCompletion implements AutoCompletionServer {
                 if (regularMatched.contains(user) || preferUsernames) {
                     nicks.add(user.getRegularDisplayNick());
                 }
-                if (localizedMatched.contains(user) && !preferUsernames) {
-                    nicks.add(user.getDisplayNick());
-                }
                 if (customMatched.contains(user) && !preferUsernames) {
                     nicks.add(user.getCustomNick());
                 }
             }
 
-            if (!user.hasRegularDisplayNick()) {
-                info.put(user.getDisplayNick(), user.getRegularDisplayNick());
-                info.put(user.getRegularDisplayNick(), user.getDisplayNick());
-            }
             if (user.hasCustomNickSet()) {
                 info.put(user.getCustomNick(), user.getRegularDisplayNick());
                 info.put(user.getRegularDisplayNick(), user.getCustomNick());
@@ -529,7 +516,7 @@ public class ChannelCompletion implements AutoCompletionServer {
             matched = true;
             regularMatched.add(user);
         }
-        if (!user.hasRegularDisplayNick() && StringUtil.toLowerCase(user.getDisplayNick()).startsWith(search)) {
+        if (StringUtil.toLowerCase(user.getName()).startsWith(search)) {
             matched = true;
             localizedMatched.add(user);
         }
@@ -537,7 +524,6 @@ public class ChannelCompletion implements AutoCompletionServer {
             matched = true;
             customMatched.add(user);
         }
-
         if (matched) {
             matchedUsers.add(user);
         }

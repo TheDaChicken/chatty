@@ -522,7 +522,7 @@ public class Usericon implements Comparable {
     
     public static class Builder {
 
-        private final Usericon.Type type;
+        private final Type type;
         private final int source;
 
         private String channel;
@@ -539,7 +539,7 @@ public class Usericon implements Comparable {
         private String position;
         private Dimension targetImageSize;
 
-        public Builder(Usericon.Type type, int source) {
+        public Builder(Type type, int source) {
             this.type = type;
             this.source = source;
         }

@@ -1,17 +1,12 @@
 
 package chatty;
 
-import chatty.gui.MainGui;
-import chatty.gui.components.settings.MainSettings;
-import chatty.gui.components.textpane.UserNotice;
-import chatty.lang.Language;
 import chatty.util.DateTime;
 import chatty.util.Replacer;
 import chatty.util.StringUtil;
-import chatty.util.api.usericons.Usericon;
 import chatty.util.commands.Parameters;
-import chatty.util.irc.MsgTags;
-import chatty.util.settings.FileManager.SaveResult;
+import chatty.util.settings.FileManager;
+
 import java.awt.Dimension;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -52,10 +47,7 @@ public class Helper {
         for (String part : parts) {
             String channel = part.trim();
             if (isValidChannel(channel)) {
-                if (prepend && !channel.startsWith("#")) {
-                    channel = "#"+channel;
-                }
-                result.add(StringUtil.toLowerCase(channel));
+                result.add(channel);
             }
         }
         return result;
@@ -80,6 +72,7 @@ public class Helper {
         String result = "";
         String sep = "";
         for (String channel : set) {
+            LOGGER.info("buildStreamsString");
             result += sep+channel.replace("#", "");
             sep = ", ";
         }
@@ -100,8 +93,7 @@ public class Helper {
      */
     public static boolean isValidChannel(String channel) {
         try {
-            return CHANNEL_PATTERN.matcher(channel).matches()
-                    || CHATROOM_PATTERN.matcher(channel).matches();
+            return isChannelID(channel) || CHANNEL_PATTERN.matcher(channel).matches();
         } catch (PatternSyntaxException | NullPointerException ex) {
             return false;
         }
@@ -109,6 +101,16 @@ public class Helper {
     
     public static boolean isValidChannelStrict(String channel) {
         return isValidChannel(channel) && channel.startsWith("#");
+    }
+
+    /**
+     * Checks if channel which could be anything is a channel id
+     *
+     * @param channel_identifier could be channel id or channel username
+     * @return
+     */
+    public static boolean isChannelID(String channel_identifier) {
+        return channel_identifier.startsWith("UC") && !channel_identifier.contains(" ") && channel_identifier.length() > 13;
     }
     
     /**
@@ -174,10 +176,7 @@ public class Helper {
         if (!isValidChannel(channel)) {
             return null;
         }
-        if (!channel.startsWith("#")) {
-            channel = "#"+channel;
-        }
-        return StringUtil.toLowerCase(channel);
+        return channel;
     }
     
     /**
@@ -192,10 +191,7 @@ public class Helper {
         if (chan == null) {
             return null;
         }
-        if (isValidChannel(chan) && !chan.startsWith("#")) {
-            return StringUtil.toLowerCase("#"+chan);
-        }
-        return StringUtil.toLowerCase(chan);
+        return chan;
     }
     
     /**
@@ -229,48 +225,6 @@ public class Helper {
         }
         return result;
     }
-    
-    /**
-     * Makes a readable message out of the given reason code.
-     * 
-     * @param reason
-     * @param reasonMessage
-     * @return 
-     */
-    public static String makeDisconnectReason(int reason, String reasonMessage) {
-        String result = "";
-        
-        switch (reason) {
-            case Irc.ERROR_UNKNOWN_HOST:
-                result = Language.getString("chat.error.unknownHost");
-                break;
-            case Irc.REQUESTED_DISCONNECT:
-                result = "Requested";
-                break;
-            case Irc.ERROR_CONNECTION_CLOSED:
-                result = "";
-                break;
-            case Irc.ERROR_REGISTRATION_FAILED:
-                result = Language.getString("chat.error.loginFailed");
-                break;
-            case Irc.ERROR_SOCKET_TIMEOUT:
-                result = Language.getString("chat.error.connectionTimeout");
-                break;
-            case Irc.SSL_ERROR:
-                result = "Could not establish secure connection ("+reasonMessage+")";
-                break;
-            case Irc.ERROR_SOCKET_ERROR:
-                result = reasonMessage;
-                break;
-        }
-        
-        if (!result.isEmpty()) {
-            result = " ("+result+")";
-        }
-        
-        return result;
-    }
-    
 
     /**
      * https://stackoverflow.com/questions/5609500/remove-jargon-but-keep-real-characters/5609532#5609532
@@ -507,62 +461,6 @@ public class Helper {
         System.out.println(nf.format(Math.round(74/30.0)*30/60.0));
     }
     
-    /**
-     * Checks if the id matches the given User. The id can be one of: $mod,
-     * $sub, $turbo, $admin, $broadcaster, $staff, $bot. If the user has the
-     * appropriate user status, this returns true. If the id is unknown or the
-     * user doesn't have the required status, this returns false.
-     * 
-     * @param id The id that is required
-     * @param user The User object to check against
-     * @return true if the id is known and matches the User, false otherwise
-     */
-    public static boolean matchUserStatus(String id, User user) {
-        if (id.equals("$mod")) {
-            if (user.isModerator()) {
-                return true;
-            }
-        } else if (id.equals("$sub")) {
-            if (user.isSubscriber()) {
-                return true;
-            }
-        } else if (id.equals("$turbo")) {
-            if (user.hasTurbo()) {
-                return true;
-            }
-        } else if (id.equals("$admin")) {
-            if (user.isAdmin()) {
-                return true;
-            }
-        } else if (id.equals("$broadcaster")) {
-            if (user.isBroadcaster()) {
-                return true;
-            }
-        } else if (id.equals("$staff")) {
-            if (user.isStaff()) {
-                return true;
-            }
-        } else if (id.equals("$bot")) {
-            if (user.isBot()) {
-                return true;
-            }
-        } else if (id.equals("$globalmod")) {
-            if (user.isGlobalMod()) {
-                return true;
-            }
-        } else if (id.equals("$anymod")) {
-            if (user.isAdmin() || user.isBroadcaster() || user.isGlobalMod()
-                    || user.isModerator() || user.isStaff()) {
-                return true;
-            }
-        } else if (id.equals("$vip")) {
-            if (user.hasTwitchBadge("vip")) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
     public static String checkHttpUrl(String url) {
         if (url == null) {
             return null;
@@ -702,16 +600,6 @@ public class Helper {
         return banInfo;
     }
     
-    public static String makeBanCommand(User user, long duration, String id) {
-        if (duration > 0) {
-            return StringUtil.concats("timeout", user.getName(), duration).trim();
-        }
-        if (duration == -2) {
-            return StringUtil.concats("delete", id).trim();
-        }
-        return StringUtil.concats("ban", user.getName()).trim();
-    }
-    
     public static Dimension getDimensionFromParameter(String parameter) {
         if (parameter != null && !parameter.trim().isEmpty()) {
             String[] split = parameter.trim().split("x|\\s");
@@ -754,16 +642,12 @@ public class Helper {
         }
         return Collections.unmodifiableMap(result);
     }
-    
+
     public static String makeDisplayNick(User user, long displayNamesMode) {
         if (user.hasCustomNickSet()) {
             return user.getFullNick();
         } else if (displayNamesMode == SettingsManager.DISPLAY_NAMES_MODE_BOTH) {
-            if (user.hasRegularDisplayNick()) {
-                return user.getFullNick();
-            } else {
-                return user.getFullNick() + " (" + user.getRegularDisplayNick() + ")";
-            }
+            return user.getFullNick();
         } else if (displayNamesMode == SettingsManager.DISPLAY_NAMES_MODE_LOCALIZED) {
             return user.getFullNick();
         } else if (displayNamesMode == SettingsManager.DISPLAY_NAMES_MODE_CAPITALIZED) {
@@ -773,7 +657,7 @@ public class Helper {
         }
         return user.getFullNick();
     }
-    
+
     public static String encodeFilename(String input) {
         try {
             return URLEncoder.encode(input, "UTF-8");
@@ -816,92 +700,7 @@ public class Helper {
     }
     
     public static void addUserParameters(User user, String msgId, String autoModMsgId, Parameters parameters) {
-        parameters.put("nick", user.getRegularDisplayNick());
-        if (msgId != null) {
-            parameters.put("msg-id", msgId);
-            parameters.put("msg", user.getMessageText(msgId));
-        }
-        if (autoModMsgId != null) {
-            parameters.put("automod-msg-id", autoModMsgId);
-            String autoModMsg = user.getAutoModMessageText(autoModMsgId);
-            if (autoModMsg != null) {
-                parameters.put("msg", autoModMsg);
-            }
-        }
-        parameters.put("user-id", user.getId());
-        if (user.getTwitchBadges() != null) {
-            parameters.put("twitch-badge-info", user.getTwitchBadges().toString());
-            parameters.put("twitch-badges", Usericon.makeBadgeInfo(user.getTwitchBadges()));
-        }
-        parameters.put("display-nick", user.getDisplayNick());
-        parameters.put("custom-nick", user.getCustomNick());
-        parameters.put("full-nick", user.getFullNick());
-        if (!user.hasRegularDisplayNick()) {
-            parameters.put("display-nick2", user.getDisplayNick()+" ("+user.getRegularDisplayNick()+")");
-            parameters.put("full-nick2", user.getFullNick()+" ("+user.getRegularDisplayNick()+")");
-            parameters.put("special-nick", "true");
-        }
-        else {
-            parameters.put("display-nick2", user.getDisplayNick());
-            parameters.put("full-nick2", user.getFullNick());
-        }
-        parameters.putObject("user", user);
-    }
-    
-    private static final Map<UserNotice, javax.swing.Timer> pointsMerge = new HashMap<>();
-    
-    /**
-     * Must be run in EDT.
-     * 
-     * @param newNotice
-     * @param g 
-     */
-    public static void pointsMerge(UserNotice newNotice, MainGui g) {
-        UserNotice result = findPointsMerge(newNotice);
-        if (result == null) {
-            javax.swing.Timer timer = new javax.swing.Timer(1000, e -> {
-                pointsMerge.remove(newNotice);
-                g.printUsernotice(newNotice.type, newNotice.user, newNotice.infoText, newNotice.attachedMessage, newNotice.tags);
-            });
-            timer.setRepeats(false);
-            pointsMerge.put(newNotice, timer);
-            timer.start();
-        }
-        else {
-            g.printUsernotice(result.type, result.user, result.infoText, result.attachedMessage, result.tags);
-        }
-    }
-    
-    private static UserNotice findPointsMerge(UserNotice newNotice) {
-        UserNotice found = null;
-        for (Map.Entry<UserNotice, javax.swing.Timer> entry : pointsMerge.entrySet()) {
-            UserNotice stored = entry.getKey();
-            // Attached messages seem to be trimmed depending on source
-            boolean sameAttachedMsg = Objects.equals(
-                    StringUtil.trimAll(stored.attachedMessage),
-                    StringUtil.trimAll(newNotice.attachedMessage));
-            if (stored.user.sameUser(newNotice.user) && sameAttachedMsg) {
-                found = stored;
-                entry.getValue().stop();
-            }
-        }
-        if (found != null) {
-            pointsMerge.remove(found);
-            UserNotice ps = found.tags.isFromPubSub() ? found : newNotice;
-            UserNotice irc = found.tags.isFromPubSub() ? newNotice : found;
-            // Use irc msg, since that would also have the emote tags
-            return new UserNotice(ps.type, ps.user, ps.infoText, irc.attachedMessage, MsgTags.merge(found.tags, newNotice.tags));
-        }
-        return null;
-    }
-    
-    public static void setDefaultTimezone(String input) {
-        if (!StringUtil.isNullOrEmpty(input)) {
-            MainSettings.DEFAULT_TIMEZONE = TimeZone.getDefault();
-            TimeZone tz = TimeZone.getTimeZone(input);
-            TimeZone.setDefault(tz);
-            LOGGER.info(String.format("[Timezone] Set to %s [%s]", tz.getDisplayName(), input));
-        }
+
     }
     
     public static String getErrorMessageWithCause(Throwable ex) {
@@ -920,11 +719,11 @@ public class Helper {
         }
         return ex.getClass().getSimpleName();
     }
-    
-    public static String makeSaveResultInfo(List<SaveResult> result) {
+
+    public static String makeSaveResultInfo(List<FileManager.SaveResult> result) {
         StringBuilder b = new StringBuilder();
         int index = 0;
-        for (SaveResult r : result) {
+        for (FileManager.SaveResult r : result) {
             if (r == null) {
                 continue;
             }
@@ -937,7 +736,7 @@ public class Helper {
                 b.append(String.format("* Writing failed: %s\n",
                         getErrorMessageCompact(r.writeError)));
             }
-            
+
             // Backup
             if (r.backupWritten) {
                 b.append(String.format("* Backup written to %s\n",
@@ -947,15 +746,15 @@ public class Helper {
                 b.append(String.format("* Backup failed: %s\n",
                         getErrorMessageCompact(r.backupError)));
             }
-            else if (r.cancelReason == SaveResult.CancelReason.INVALID_CONTENT) {
+            else if (r.cancelReason == FileManager.SaveResult.CancelReason.INVALID_CONTENT) {
                 b.append("* Backup failed: Invalid content\n");
             }
-            
+
             // Removed deprecated
             if (r.removed) {
                 b.append("* Removed unused file\n");
             }
-            
+
             // If anything was appended for this file, add header
             if (b.length() > index) {
                 b.insert(index, String.format("[%s]\n", r.id));
@@ -964,5 +763,5 @@ public class Helper {
         }
         return b.toString();
     }
-    
+
 }

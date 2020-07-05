@@ -36,7 +36,7 @@ public class Logging {
     
     private final RingBuffer<LogRecord> lastMessages = new RingBuffer<>(8);
     
-    public Logging(final TwitchClient client) {
+    public Logging(final YouTubeClient client) {
         createLogDir();
         
         // Remove default handlers
@@ -78,13 +78,6 @@ public class Logging {
             public void publish(LogRecord record) {
                 if (record.getLevel() != USERINFO) {
                     client.debug(record.getMessage());
-                    // WebsocketClient/WebsocketManager
-                    if (record.getMessage().startsWith("[FFZ-WS]")) {
-                        client.debugFFZ(record.getMessage());
-                    }
-                    if (record.getMessage().startsWith("[PubSub]")) {
-                        client.debugPubSub(record.getMessage());
-                    }
                 }
                 if (record.getLevel() == Level.SEVERE) {
                     if (client.g != null) {

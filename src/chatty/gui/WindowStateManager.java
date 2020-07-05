@@ -235,8 +235,10 @@ public class WindowStateManager {
     }
     
     private boolean isOnScreen(Point location, int width) {
-        return GuiUtil.isPointOnScreen(location, 100, 8)
-            || GuiUtil.isPointOnScreen(location, width - 100, 8);
+        // TODO 6
+        // return GuiUtil.isPointOnScreen(location, 100, 8)
+        //    || GuiUtil.isPointOnScreen(location, width - 100, 8);
+        return false;
     }
     
     /**

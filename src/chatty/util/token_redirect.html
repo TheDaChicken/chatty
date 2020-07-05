@@ -20,11 +20,10 @@ function initiate() {
 	}
 	document.getElementById("javascript").className = "";
 	if (access_token != null) {
-            document.location.replace("http://127.0.0.1:61324/token/"+access_token);
-	}
-        else {
-            document.getElementById("javascript").innerHTML = "Error: Access Token not found";
-        }
+        document.location.replace("http://127.0.0.1:61324/token"+access_token);
+	} else {
+        document.getElementById("javascript").innerHTML = "Error: Access Token not found";
+    }
 }
 -->
 </script>

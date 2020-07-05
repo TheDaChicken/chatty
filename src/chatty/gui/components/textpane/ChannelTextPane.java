@@ -21,19 +21,16 @@ import chatty.gui.components.menus.ContextMenuListener;
 import chatty.gui.emoji.EmojiUtil;
 import chatty.util.ChattyMisc;
 import chatty.util.ChattyMisc.CombinedEmotesInfo;
-import chatty.util.CombinedEmoticon;
 import chatty.util.DateTime;
 import chatty.util.Debugging;
 import chatty.util.MiscUtil;
 import chatty.util.RingBuffer;
 import chatty.util.StringUtil;
-import chatty.util.api.CheerEmoticon;
 import chatty.util.api.Emoticon;
 import chatty.util.api.Emoticon.EmoticonImage;
 import chatty.util.api.Emoticon.EmoticonUser;
 import chatty.util.api.Emoticons;
 import chatty.util.api.Emoticons.TagEmotes;
-import chatty.util.api.pubsub.ModeratorActionData;
 import chatty.util.colors.ColorCorrectionNew;
 import chatty.util.colors.ColorCorrector;
 import java.awt.*;
@@ -486,7 +483,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         userStyle.addAttribute(Attribute.ID_AUTOMOD, message.msgId);
         // Should be the same as the start of the "text" in the AutoModMessage,
         // so highlight matches are displayed properly
-        String startText = "[AutoMod] <"+message.user.getDisplayNick()+">";
+        String startText = "[AutoMod] <"+message.user.getRegularDisplayNick()+">";
         print(startText, userStyle);
         printSpecialsInfo(" "+message.message, style,
                 Match.shiftMatchList(message.highlightMatches, -startText.length()));
@@ -724,9 +721,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                         changeInfo(line, attr -> {
                             String existing = (String) attr.getAttribute(Attribute.AUTOMOD_ACTION);
                             String action = "approved";
-                            if (info.data.type == ModeratorActionData.Type.AUTOMOD_DENIED) {
-                                action = "denied";
-                            }
+                            //if (info.data.type == ModeratorActionData.Type.AUTOMOD_DENIED) {
+                            //    action = "denied";
+                            //}
                             /**
                              * Usually there should only be one mod approving/
                              * denying a particular message, but just in case
@@ -1059,7 +1056,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 }
                 if (first) {
                     setBanInfo(l.line, banInfo);
-                    setLineCommand(l.line.getStartOffset(), Helper.makeBanCommand(user, duration, targetMsgId));
+                    //setLineCommand(l.line.getStartOffset(), Helper.makeBanCommand(user, duration, targetMsgId));
                     replayModLogInfo();
                     first = false;
                 }
@@ -1815,10 +1812,6 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         else if (styles.namesMode() == SettingsManager.DISPLAY_NAMES_MODE_USERNAME) {
             userName = user.getName();
         }
-        else if (styles.namesMode() != SettingsManager.DISPLAY_NAMES_MODE_CAPITALIZED
-                || user.hasRegularDisplayNick()) {
-            userName = user.getDisplayNick();
-        }
         else {
             userName = user.getName();
         }
@@ -1852,7 +1845,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         }
         
         // Add username in parentheses behind, if necessary
-        if (!user.hasRegularDisplayNick() && !user.hasCustomNickSet()
+        if (!user.hasCustomNickSet()
                 && styles.namesMode() == SettingsManager.DISPLAY_NAMES_MODE_BOTH) {
             MutableAttributeSet style = styles.messageUser(user, msgId, background);
             StyleConstants.setBold(style, false);
@@ -2191,9 +2184,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         
         if (styles.isEnabled(Setting.EMOTICONS_ENABLED)) {
             findEmoticons(text, user, ranges, rangesStyle, emotes);
-            if (containsBits) {
-                findBits(main.emoticons.getCheerEmotes(), text, ranges, rangesStyle, user);
-            }
+            //if (containsBits) {
+            //    //findBits(main.emoticons.getCheerEmotes(), text, ranges, rangesStyle, user);
+            //}
         }
         
         if (styles.isEnabled(Setting.MENTIONS)) {
@@ -2600,41 +2593,6 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 boolean textEmoji = emoticon.type == Emoticon.Type.EMOJI && m.group().endsWith("\uFE0E");
                 if (!textEmoji) {
                     addEmoticon(emoticon, start, end, ranges, rangesStyle);
-                }
-            }
-        }
-    }
-    
-    private void findBits(Set<CheerEmoticon> emotes, String text,
-            Map<Integer, Integer> ranges,
-            Map<Integer, MutableAttributeSet> rangesStyle,
-            User user) {
-        for (CheerEmoticon emote : emotes) {
-            if (!emote.matchesUser(user, null)) {
-                // CONTINUE
-                continue;
-            }
-            Matcher m = emote.getMatcher(text);
-            while (m.find()) {
-                int start = m.start();
-                int end = m.end() - 1;
-                try {
-                    int bits = Integer.parseInt(m.group(1));
-                    int bitsLength = m.group(1).length();
-                    if (bits < emote.min_bits) {
-                        // CONTINUE
-                        continue;
-                    }
-                    boolean ignored = main.emoticons.isEmoteIgnored(emote);
-                    if (!ignored && addEmoticon(emote, start, end - bitsLength, ranges, rangesStyle)) {
-                        // Add emote
-                        addFormattedText(emote.color, end - bitsLength + 1, end, ranges, rangesStyle);
-                    } else {
-                        // Add just text
-                        addFormattedText(emote.color, start, end, ranges, rangesStyle);
-                    }
-                } catch (NumberFormatException ex) {
-                    System.out.println("Error parsing cheer: " + ex);
                 }
             }
         }

@@ -56,7 +56,7 @@ public class Webserver implements Runnable {
             }
 
             @Override
-            public void webserverTokenReceived(String token) {
+            public void webserverCodeReceived(String token) {
                 System.out.println("Save token and stuff");
             }
         });
@@ -264,18 +264,19 @@ public class Webserver implements Runnable {
                 String response = "";
                 // Check if there should be a token in there
                 if (StringUtil.toLowerCase(request).startsWith("get /token/")) {
-                    String token = getToken(request);
-                    if (token.isEmpty()) {
+                    String query_string = getQueryString(request);
+                    String code = getCode(query_string);
+                    if (code.isEmpty()) {
                         // No token, so show redirect page
                         response = makeResponse("token_redirect.html");
                         debugConnection("Token redirect");
                     } else {
-                        // Token available, so show done page and send token
+                        // Query String is available, so show done page and send token
                         // to the client
                         response = makeResponse("token_received.html");
-                        debugConnection("Token received");
+                        debugConnection("Code received");
                         if (listener != null) {
-                            listener.webserverTokenReceived(token);
+                            listener.webserverCodeReceived(code);
                         }
                     }
                 }
@@ -310,12 +311,29 @@ public class Webserver implements Runnable {
          * @return 
          */
         private String removeToken(String request) {
-            if (getToken(request).isEmpty()) {
+            if (getQueryString(request).isEmpty()) {
                 return request;
             }
-            return request.replace(getToken(request), "<token>");
+            return request.replace(getQueryString(request), "<stuff>");
         }
-        
+
+        private String getCode(String query_string) {
+            try {
+                final String[] pairs = query_string.split("&");
+                for (String pair : pairs) {
+                    final int idx = pair.indexOf("=");
+                    final String key = idx > 0 ? URLDecoder.decode(pair.substring(0, idx), "UTF-8") : pair;
+                    final String value = idx > 0 && pair.length() > idx + 1 ? URLDecoder.decode(pair.substring(idx + 1), "UTF-8") : null;
+                    if(value != null && key.equalsIgnoreCase("code")) {
+                        return value;
+                    }
+                }
+            } catch (UnsupportedEncodingException e) {
+                return "";
+            }
+            return "";
+        }
+
         /**
          * Gets the token from the request string. It is expected to be between
          * "/token/" and the next "/" or the next space. Usually it should be
@@ -324,20 +342,15 @@ public class Webserver implements Runnable {
          * @param request
          * @return The token or an empty String
          */
-        private String getToken(String request) {
+        private String getQueryString(String request) {
             // Check if token might be in there
             int start = request.indexOf("/token/");
             if (start == -1) {
                 // if not, return immediately
                 return "";
             }
-            start += "/token/".length();
+            start += "/token/?".length();
             int end = request.indexOf(" ", start);
-            int end2 = request.indexOf("/", start);
-            // If a / comes earlier than a space, use that
-            if (end2 != -1 && end2 < end) {
-                end = end2;
-            }
             if (end == -1) {
                 return "";
             }
@@ -411,11 +424,11 @@ public class Webserver implements Runnable {
         public void webserverError(String error);
         
         /**
-         * The token has been received.
+         * The code has been received.
          * 
          * @param token The token
          */
-        public void webserverTokenReceived(String token);
+        public void webserverCodeReceived(String token);
     }
     
 }

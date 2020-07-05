@@ -431,7 +431,8 @@ public class Channels {
         
         gui.updateState(true);
     }
-    
+
+
     public void popoutActiveChannel() {
         if (getActiveChannel() != null) {
             popout(getActiveChannel());
@@ -797,5 +798,5 @@ public class Channels {
             this.size = size;
         }
     }
-    
+
 }

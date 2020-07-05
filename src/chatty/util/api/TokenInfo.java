@@ -2,6 +2,8 @@
 package chatty.util.api;
 
 import chatty.lang.Language;
+import com.google.api.services.youtube.YouTubeScopes;
+
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -14,16 +16,7 @@ import java.util.Set;
 public class TokenInfo {
     
     public enum Scope {
-        CHAT("chat_login", "chat"),
-        USERINFO("user_read", "user"),
-        EDITOR("channel_editor", "editor"),
-        EDIT_BROADCAST("user:edit:broadcast", "broadcast"),
-        COMMERICALS("channel_commercial", "commercials"),
-        SUBSCRIBERS("channel_subscriptions", "subscribers"),
-        FOLLOW("user_follows_edit", "follow"),
-        SUBSCRIPTIONS("user_subscriptions", "subscriptions"),
-        CHAN_MOD("channel:moderate", "chanMod"),
-        POINTS("channel:read:redemptions", "points");
+        FULL_SCOPE(YouTubeScopes.YOUTUBE_FORCE_SSL, "chat");
         
         public String scope;
         public String label;
@@ -53,14 +46,6 @@ public class TokenInfo {
         this.name = name;
         this.userId = userId;
         valid = true;
-        /**
-         * Accept new chat scopes as well. Adding old "chat_login" scope for
-         * them, which is checked for. Kind of a hack, but should work well
-         * enough.
-         */
-        if (scopes.contains("chat:read") && scopes.contains("chat:edit")) {
-            scopes.add("chat_login");
-        }
         this.scopes = new HashSet<>(scopes);
     }
     

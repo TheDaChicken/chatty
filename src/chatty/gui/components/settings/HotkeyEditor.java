@@ -109,7 +109,7 @@ public class HotkeyEditor extends TableEditor<Hotkey> {
      * The dialog to add/edit hotkeys. Lets you select an action and configure
      * a key combination.
      */
-    public static class MyItemEditor implements TableEditor.ItemEditor<Hotkey> {
+    public static class MyItemEditor implements ItemEditor<Hotkey> {
         
         private static final String GLOBAL_HOTKEY_WARNING_GENERAL = "<br />"
                                         + "<br />"

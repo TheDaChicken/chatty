@@ -795,7 +795,7 @@ public class Settings {
     private String settingsToJson(String file) {
         JSONObject obj = new JSONObject();
         
-        Set<Map.Entry<String,Setting>> set = settings.entrySet();
+        Set<Entry<String,Setting>> set = settings.entrySet();
         for (Entry<String,Setting> entry : set) {
             Setting setting = entry.getValue();
             if (setting.allowedToSave() && setting.getFile().equals(file)) {

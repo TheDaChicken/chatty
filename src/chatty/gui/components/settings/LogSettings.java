@@ -124,7 +124,7 @@ public class LogSettings extends SettingsPanel {
                     user.setSubscriber(true);
                     Map<String, String> badges = new LinkedHashMap<>();
                     badges.put("subscriber", "12");
-                    user.setTwitchBadges(badges);
+                    user.setBadges(badges);
                     String normalResult = command.replace(ChatLog.messageParam(
                             user,
                             "Hello, good day! :)",
@@ -147,10 +147,9 @@ public class LogSettings extends SettingsPanel {
                     badges.put("premium", "1");
                     user = new User("TestName", Room.createRegular("#testchannel"));
                     user.setId("123457");
-                    user.setTwitchBadges(badges);
+                    user.setBadges(badges);
                     user.setVip(true);
                     user.setSubscriber(true);
-                    user.setTurbo(true);
                     String badgesResult = command.replace(ChatLog.messageParam(
                             user,
                             "HeyGuys",

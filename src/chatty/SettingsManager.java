@@ -1,12 +1,11 @@
 
 package chatty;
 
-import chatty.gui.components.updating.Version;
-import chatty.util.colors.HtmlColors;
-import chatty.gui.WindowStateManager;
 import chatty.gui.components.eventlog.EventLog;
 import chatty.gui.components.settings.NotificationSettings;
 import chatty.gui.notifications.Notification;
+import chatty.util.colors.HtmlColors;
+import chatty.gui.WindowStateManager;
 import chatty.util.DateTime;
 import chatty.util.ElapsedTime;
 import chatty.util.StringUtil;
@@ -23,7 +22,6 @@ import java.util.logging.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
-
 /**
  *
  * @author tduva
@@ -177,8 +175,8 @@ public class SettingsManager {
         settings.addLong("onStart", 1);
         settings.addString("autojoinChannel", "");
         settings.addString("previousChannel", "");
-        settings.addString("token","");
-        settings.setFile("token", loginFile);
+        settings.addString("tokens","");
+        settings.setFile("tokens", loginFile);
         settings.addBoolean("allowTokenOverride", false);
         settings.addBoolean("foreignToken", false);
         // Don't save setting, login with password isn't possible anymore
@@ -478,7 +476,7 @@ public class SettingsManager {
         // Notifications
         //==============
         settings.addBoolean("requestFollowedStreams", true);
-        
+
         settings.addLong("nType", NotificationSettings.NOTIFICATION_TYPE_CUSTOM);
         settings.addLong("nScreen", -1);
         settings.addLong("nPosition", 3);
@@ -623,7 +621,7 @@ public class SettingsManager {
         // Whispering
         settings.addBoolean("whisperEnabled", false);
         settings.addBoolean("whisperWhitelist", false);
-        settings.addLong("whisperDisplayMode", WhisperManager.DISPLAY_PER_USER);
+        //settings.addLong("whisperDisplayMode", WhisperManager.DISPLAY_PER_USER);
         settings.addString("groupChatServer", "");
         settings.addString("groupChatPort", "");
         settings.addBoolean("whisperAutoRespond", false);
@@ -764,120 +762,14 @@ public class SettingsManager {
      */
     public void overrideSettings() {
         settings.setBoolean("ignoreJoinsParts", false);
-        if (switchedFromVersionBefore("0.7.2")) {
-            String value = settings.getString("timeoutButtons");
-            if (value.equals("5,2m,10m,30m")) {
-                /**
-                 * Setting is equal to the old default value, so it probably
-                 * wasn't customized, so just reset it to the new default value.
-                 */
-                settings.setString("timeoutButtons", null);
-                LOGGER.warning("Updated timeoutButtons setting to new default");
-            } else if (!StringUtil.toLowerCase(value).contains("/ban") &&
-                    !StringUtil.toLowerCase(value).contains("/unban")) {
-                /**
-                 * Setting wasn't on the old default value, but it doesn't
-                 * contain /Ban or /Unban, so add those to the current
-                 * (customized) value.
-                 */
-                String newValue = "/Ban[B], /Unban[U], "+value;
-                settings.setString("timeoutButtons", newValue);
-                LOGGER.warning("Added /Ban,/Unban to timeoutButtons setting, now: "+newValue);
-            }
-        }
-        if (switchedFromVersionBefore("0.8.1")) {
-            if (settings.getString("portDefault").equals("6667,80")) {
-                settings.setString("portDefault", "6667,443");
-            }
-        }
-        if (switchedFromVersionBefore("0.8.2")) {
-            if (settings.getString("serverDefault").equals("irc.twitch.tv")) {
-                settings.setString("serverDefault", "irc.chat.twitch.tv");
-            }
-            if (settings.getString("portDefault").equals("6667,443")) {
-                settings.setString("portDefault", "6697,6667,443,80");
-            }
-            settings.setAdd("securedPorts", (long)443);
-        }
-        if (switchedFromVersionBefore("0.8.4")) {
-            settings.setBoolean("ircv3CapitalizedNames", true);
-        }
-        if (switchedFromVersionBefore("0.8.5b4")) {
-            String currentValue = settings.getString("timeoutButtons");
-            if (!StringUtil.toLowerCase(currentValue).contains("/modunmod")) {
-                settings.setString("timeoutButtons", currentValue+"\n/ModUnmod");
-            }
-        }
-        if (switchedFromVersionBefore("0.8.6b3")) {
-            settings.putList("notifications", getDefaultNotificationSettingValue());
-        }
-        if (switchedFromVersionBefore("0.8.7b1")) {
-            String currentValue = settings.getString("timeoutButtons");
-            if (!StringUtil.toLowerCase(currentValue).contains("/automod_approve")) {
-                settings.setString("timeoutButtons", currentValue + "\n\n"
-                        + "@AutoMod\n"
-                        + ".Approve=/Automod_approve\n"
-                        + ".Deny=/Automod_deny");
-            }
-        }
-        if (switchedFromVersionBefore("0.9.3")) {
-            String currentValue = settings.getString("timeoutButtons");
-            if (!StringUtil.toLowerCase(currentValue).contains("/delete")) {
-                settings.setString("timeoutButtons", currentValue + "\n\n"
-                        + "Delete=/delete $$(msg-id)");
-            }
-        }
-        if (switchedFromVersionBefore("0.9.1b3")) {
-            /**
-             * Migrate both favorites and history, but only channels that don't
-             * have a value in the new setting yet.
-             * 
-             * This won't turn an already existing entry into a favorite even if
-             * it was a favorite before, however this usually shouldn't be an
-             * issue (except in some cases where 0.9.1b2 was used before, where
-             * not all favorites were migrated correctly).
-             */
-            LOGGER.info("Migrating Favorites/History");
-            List<String> favs = settings.getList("channelFavorites");
-            Map<String, Long> history = settings.getMap("channelHistory");
-            Map<String, List> data = settings.getMap("roomFavorites");
-            // Migrate history
-            for (String stream : history.keySet()) {
-                boolean isFavorite = favs.contains(stream);
-                long lastJoined = history.get(stream);
-                String channel = Helper.toChannel(stream);
-                if (!data.containsKey(channel)) {
-                    data.put(channel, new ChannelFavorites.Favorite(
-                            Room.createRegular(channel), lastJoined, isFavorite).toList());
-                }
-            }
-            // Migrate favorites
-            for (String fav : favs) {
-                String channel = Helper.toChannel(fav);
-                if (!data.containsKey(channel)) {
-                    data.put(channel, new ChannelFavorites.Favorite(
-                            Room.createRegular(channel), -1, true).toList());
-                }
-            }
-            settings.putMap("roomFavorites", data);
-        }
-        
+
         // Turn off Highlight Background if using dark background (if not loaded
         // from the settings yet)
         Color bgColor = HtmlColors.decode(settings.getString("backgroundColor"));
         if (ColorCorrection.isDarkColor(bgColor) && !settings.isValueSet("highlightBackground")) {
             settings.setBoolean("highlightBackground", false);
         }
-        
-        if (switchedFromVersionBefore("0.9.3-b5")) {
-            if (!settings.getBoolean("colorCorrection")) {
-                settings.setString("nickColorCorrection", "off");
-            }
-        }
-        
-        if (switchedFromVersionBefore("0.9.7-b4")) {
-            settings.setLong("mentionsInfo", settings.getLong("mentions"));
-        }
+
         
         overrideHotkeySettings();
     }
@@ -896,7 +788,7 @@ public class SettingsManager {
      * @return true if the given version is greater than the current version
      */
     private boolean switchedFromVersionBefore(String version) {
-        return Version.compareVersions(settings.getString("currentVersion"), version) == 1;
+        return false;
     }
     
     public void debugSettings() {
@@ -963,7 +855,7 @@ public class SettingsManager {
     
     private final ElapsedTime lastAutoSaved = new ElapsedTime(true);
 
-    void startAutoSave(TwitchClient c) {
+    void startAutoSave(YouTubeClient c) {
         Timer timer = new Timer("AutoSaveSettings", false);
         timer.schedule(new TimerTask() {
 
@@ -1016,23 +908,23 @@ public class SettingsManager {
     private List<List> getDefaultNotificationSettingValue() {
         String hl = "either";
         String st = "either";
-        
+
         Notification.Builder hlNew = new Notification.Builder(Notification.Type.HIGHLIGHT);
         hlNew.setForeground(Color.BLACK);
         hlNew.setBackground(HtmlColors.decode("#FFFF79"));
         hlNew.setDesktopEnabled(convertOldState(hl));
-        
+
         Notification.Builder stNew = new Notification.Builder(Notification.Type.STREAM_STATUS);
         stNew.setForeground(Color.BLACK);
         stNew.setBackground(HtmlColors.decode("#FFFFF0"));
         stNew.setDesktopEnabled(convertOldState(st));
-        
+
         List<List> result = new ArrayList<>();
         result.add(new Notification(hlNew).toList());
         result.add(new Notification(stNew).toList());
         return result;
     }
-    
+
     private static Notification.State convertOldState(String input) {
         switch (input) {
             case "off": return Notification.State.OFF;
@@ -1045,5 +937,5 @@ public class SettingsManager {
         }
         return Notification.State.OFF;
     }
-    
+
 }

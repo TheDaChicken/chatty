@@ -342,7 +342,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
         // Initialize
         //------------
         loadSettings();
-        notificationSettings.setUserReadPermission(settings.getList("scopes").contains(TokenInfo.Scope.USERINFO.scope));
+        notificationSettings.setUserReadPermission(settings.getList("scopes").contains(TokenInfo.Scope.FULL_SCOPE.scope));
         if (action != null) {
             editDirectly(action, parameter);
         }

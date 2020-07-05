@@ -125,15 +125,15 @@ public class UsericonManager {
      * stuff didn't load (yet).
      */
     private synchronized void addFallbackIcons() {
-        addFallbackIcon(Usericon.Type.MOD, "icon_mod.png");
-        addFallbackIcon(Usericon.Type.ADMIN, "icon_admin.png");
-        addFallbackIcon(Usericon.Type.STAFF, "icon_staff.png");
-        addFallbackIcon(Usericon.Type.BROADCASTER, "icon_broadcaster.png");
-        addFallbackIcon(Usericon.Type.SUB, "icon_sub.png");
-        addFallbackIcon(Usericon.Type.TURBO, "icon_turbo.png");
-        addFallbackIcon(Usericon.Type.GLOBAL_MOD, "icon_globalmod.png");
-        addFallbackIcon(Usericon.Type.BOT, "icon_bot.png");
-        addFallbackIcon(Usericon.Type.HL, "icon_hl.png");
+        addFallbackIcon(Type.MOD, "icon_mod.png");
+        addFallbackIcon(Type.ADMIN, "icon_admin.png");
+        addFallbackIcon(Type.STAFF, "icon_staff.png");
+        addFallbackIcon(Type.BROADCASTER, "icon_broadcaster.png");
+        addFallbackIcon(Type.SUB, "icon_sub.png");
+        addFallbackIcon(Type.TURBO, "icon_turbo.png");
+        addFallbackIcon(Type.GLOBAL_MOD, "icon_globalmod.png");
+        addFallbackIcon(Type.BOT, "icon_bot.png");
+        addFallbackIcon(Type.HL, "icon_hl.png");
 //        addFallbackIcon(Usericon.Type.RESUB, "icon_sub.png");
 //        addFallbackIcon(Usericon.Type.NEWSUB, "icon_sub.png");
 //        List<Usericon> test = new ArrayList<>();
@@ -145,7 +145,7 @@ public class UsericonManager {
 //        addDefaultIcons(test);
     }
     
-    private void addFallbackIcon(Usericon.Type type, String fileName) {
+    private void addFallbackIcon(Type type, String fileName) {
         defaultIcons.add(UsericonFactory.createFallbackIcon(type,
                 MainGui.class.getResource(fileName)));
     }
@@ -163,7 +163,7 @@ public class UsericonManager {
     public synchronized Set<String> getTwitchBadgeTypes() {
         Set<String> result = new TreeSet<>();
         for (Usericon icon : defaultIcons) {
-            if (icon.type == Usericon.Type.TWITCH) {
+            if (icon.type == Type.TWITCH) {
                 result.add(icon.badgeType.id);
                 result.add(icon.badgeType.toString());
             }
@@ -174,23 +174,7 @@ public class UsericonManager {
     public synchronized List<Usericon> getBadges(Map<String, String> badgesDef,
             User user, boolean botBadgeEnabled, boolean pointsHl, boolean channelLogo) {
         List<Usericon> icons = getTwitchBadges(badgesDef, user);
-        if (user.isBot() && botBadgeEnabled) {
-            Usericon icon = getIcon(Usericon.Type.BOT, null, null, user);
-            if (icon != null) {
-                icons.add(icon);
-            }
-        }
-        addThirdPartyIcons(icons, user);
-        addAddonIcons(icons, user);
-        if (pointsHl) {
-            Usericon icon = getIcon(Usericon.Type.HL, null, null, user);
-            if (icon != null) {
-                icons.add(0, icon);
-            }
-        }
-        if (channelLogo && channelLogos.containsKey(user.getChannel())) {
-            icons.add(0, channelLogos.get(user.getChannel()));
-        }
+        // TODO 5
         return icons;
     }
 
@@ -226,8 +210,8 @@ public class UsericonManager {
      * @param user The user the returned icon has to match
      * @return The matching icon or {@code null} if none matched
      */
-    public synchronized Usericon getIcon(Usericon.Type type,
-            String id, String version, User user) {
+    public synchronized Usericon getIcon(Type type,
+                                         String id, String version, User user) {
         if (customUsericonsEnabled()) {
             for (Usericon icon : customIcons) {
                 //System.out.println("A:"+" "+type+" "+icon.type+" "+iconsMatchesAdvancedType(icon, type, id, version)+" "+icon);
@@ -273,7 +257,7 @@ public class UsericonManager {
      * @param source The source, can be -1 to match any source
      * @return The {@code ImageIcon} or {@code null} if none was found
      */
-    private Usericon getDefaultIcon(Usericon.Type type, String id, String version, User user, int source) {
+    private Usericon getDefaultIcon(Type type, String id, String version, User user, int source) {
         for (Usericon icon : defaultIcons) {
             Usericon checked = checkIcon(icon, type, id, version, user, source);
             if (checked != null) {
@@ -289,7 +273,7 @@ public class UsericonManager {
         return null;
     }
     
-    private Usericon checkIcon(Usericon icon, Usericon.Type type, String id, String version, User user, int source) {
+    private Usericon checkIcon(Usericon icon, Type type, String id, String version, User user, int source) {
         if (iconsMatchesAdvancedType(icon, type, id, version) && iconMatchesUser(icon, user)
                 && (source == Usericon.SOURCE_ANY || icon.source == source)) {
             // Skip FFZ if disabled
@@ -377,7 +361,8 @@ public class UsericonManager {
      */
     private boolean iconMatchesUser(Usericon icon, User user) {
         if (icon.badgeTypeRestriction.id != null) {
-            Map<String, String> badges = user.getTwitchBadges();
+            // TODO 7
+            Map<String, String> badges = user.getBadges();
             String id = icon.badgeTypeRestriction.id;
             String version = icon.badgeTypeRestriction.version;
             if (badges == null) {
@@ -393,29 +378,10 @@ public class UsericonManager {
         
         // If channelRestriction doesn't match, don't have to continue
         if (!icon.channel.isEmpty()) {
-            if (icon.channel.equalsIgnoreCase(user.getOwnerChannel())) {
-                if (icon.channelInverse) {
-                    return false;
-                }
-            } else {
-                if (!icon.channelInverse) {
-                    return false;
-                }
-            }
+            // TODO 8
         }
         // Username/id restriction (can fail only if non-null)
-        boolean usernameR = icon.usernames == null || (user.getName() != null && icon.usernames.contains(user.getName()));
-        boolean useridR = icon.userids == null || (user.getId() != null  && icon.userids.contains(user.getId()));
-        if (icon.usernames != null && icon.userids != null) {
-            // Both are set, so either one may match to not fail
-            if (!usernameR && !useridR) {
-                return false;
-            }
-        }
-        else if (!usernameR || !useridR) {
-            // Only one set, which also failed
-            return false;
-        }
+        // TODO 8
         
         // Now check for the other restriction
         if (icon.restriction == null) {
@@ -427,23 +393,17 @@ public class UsericonManager {
                 return true;
             }
         } else if (icon.matchType == Usericon.MatchType.CATEGORY) {
-            if (user.hasCategory(icon.category)) {
-                return true;
-            }
+            // TODO 1
         } else if (icon.matchType == Usericon.MatchType.STATUS) {
-            if (Helper.matchUserStatus(icon.restrictionValue, user)) {
-                return true;
-            }
+            // TODO 5
         } else if (icon.matchType == Usericon.MatchType.COLOR) {
-            if (user.getColor().equals(icon.colorRestriction)) {
-                return true;
-            }
+            // TODO 8
         }
         return false;
     }
     
     private boolean iconsMatchesAdvancedType(Usericon icon,
-            Usericon.Type requestedType, String id, String version) {
+            Type requestedType, String id, String version) {
         if (icon.type == requestedType) {
             if (icon.badgeType.matchesLenient(id, version)) {
                 return true;
@@ -458,7 +418,7 @@ public class UsericonManager {
          * This is so that icons with a type of e.g. MOD can still match a
          * TWITCH badge with mod/1 (for custom and fallback icons).
          */
-        else if (requestedType == Usericon.Type.TWITCH && icon.type.badgeId != null) {
+        else if (requestedType == Type.TWITCH && icon.type.badgeId != null) {
             if (icon.type == Usericon.typeFromBadgeId(id) && icon.badgeType.equals(null, null)) {
                 return true;
             }

@@ -23,7 +23,7 @@ public class CopyMessages {
             return;
         }
         String text = settings.getString("cmTemplate");
-        text = text.replaceFirst("\\{user\\}", user.getDisplayNick());
+        text = text.replaceFirst("\\{user\\}", user.getName());
         text = text.replaceFirst("\\{message\\}", message);
         MiscUtil.copyToClipboard(text);
     }

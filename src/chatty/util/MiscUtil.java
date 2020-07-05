@@ -133,7 +133,7 @@ public class MiscUtil {
      * @param from The file to move
      * @param to The target filename, which will be overwritten if it already
      * exists
-     * @throws java.io.IOException
+     * @throws IOException
      */
     public static void moveFile(Path from, Path to) throws IOException {
         try {

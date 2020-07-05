@@ -20,8 +20,6 @@ import static chatty.gui.components.textpane.SettingConstants.USER_HOVER_HL_MENT
 import static chatty.gui.components.textpane.SettingConstants.USER_HOVER_HL_MENTIONS_CTRL_ALL;
 import chatty.util.Debugging;
 import chatty.util.StringUtil;
-import chatty.util.TwitchEmotesApi;
-import chatty.util.TwitchEmotesApi.EmotesetInfo;
 import chatty.util.api.Emoticon;
 import chatty.util.api.Emoticon.EmoticonImage;
 import chatty.util.api.Emoticons;
@@ -685,62 +683,10 @@ public class LinkController extends MouseAdapter {
     private static final Object unique = new Object();
     
     private static void makeEmoticonPopupText(EmoticonImage emoticonImage, boolean showImage, MyPopup popup, Element element) {
-        Debugging.println("emoteinfo", "makePopupText %s", emoticonImage.getEmoticon());
-        Emoticon emote = emoticonImage.getEmoticon();
-        EmotesetInfo info = TwitchEmotesApi.api.getInfoByEmote(unique, result -> {
-            SwingUtilities.invokeLater(() -> {
-                Debugging.println("emoteinfo", "Request result: %s", result);
-                // The popup may be for a different element by now
-                if (popup.isCurrentElement(element)) {
-                    popup.setText(makeEmoticonPopupText2(emoticonImage, showImage, result, popup));
-                }
-            });
-        }, emote);
-        popup.setText(makeEmoticonPopupText2(emoticonImage, showImage, info, popup));
+        // TODO POPUP TEXT
+        Logger.getLogger(LinkController.class.getName()).log(Level.SEVERE, "makeEmoticonPopupText();");
     }
-    
-    private static String makeEmoticonPopupText2(EmoticonImage emoticonImage, boolean showImage, EmotesetInfo emoteInfo, MyPopup popup) {
-        Emoticon emote = emoticonImage.getEmoticon();
-        String result = "";
-        if (emote.type == Emoticon.Type.TWITCH) {
-            if (emote.subType == Emoticon.SubType.CHEER) {
-                result = "Cheering Emote";
-                if (emote.hasStreamRestrictions()) {
-                    result += " Local";
-                } else {
-                    result += " Global";
-                }
-            } else {
-                result = TwitchEmotesApi.getEmoteType(emote, emoteInfo, true);
-            }
-        } else {
-            result = emote.type.label;
-            if (emote.type != Emoticon.Type.EMOJI) {
-                if (emote.hasStreamRestrictions()) {
-                    result += " Local";
-                } else {
-                    result += " Global";
-                }
-            }
-        }
 
-        if (Debugging.isEnabled("tt")) {
-            result += " [" + emoticonImage.getImageIcon().getDescription() + "]";
-        }
-
-        if (showImage && !emote.isAnimated()) {
-            EmoticonImage icon = emote.getIcon(2, 0, (o,n,c) -> {
-                // The set ImageIcon will have been updated
-                popup.forceUpdate();
-            });
-            popup.setIcon(icon.getImageIcon());
-        }
-        String code = emote.type == Emoticon.Type.EMOJI ? emote.stringId : Emoticons.toWriteable(emote.code);
-        return String.format("%s%s<br /><span style='font-weight:normal'>%s</span>",
-                POPUP_HTML_PREFIX,
-                Helper.htmlspecialchars_encode(code),
-                result);
-    }
     
     //----------------
     // Usericon Popup
