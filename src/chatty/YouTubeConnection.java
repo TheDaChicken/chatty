@@ -433,7 +433,6 @@ public class YouTubeConnection {
                 return;
             }
             if (onChannel(channel)) {
-                LOGGER.info("asfafsasfasfafsasafs\n");
                 User user = userJoined(channel, channel_id, nick);
                 updateUserFromTags(user, tags);
                 listener.onChannelMessage(user, text, action, tags);
