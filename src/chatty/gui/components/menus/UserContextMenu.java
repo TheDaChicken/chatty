@@ -1,12 +1,11 @@
 
 package chatty.gui.components.menus;
 
-import chatty.YouTubeClient;
 import chatty.User;
+import chatty.YouTubeClient;
 import chatty.lang.Language;
 import chatty.util.UserRoom;
-import chatty.util.commands.CustomCommand;
-import chatty.util.commands.Parameters;
+
 import java.awt.event.ActionEvent;
 import java.util.Collections;
 import java.util.List;

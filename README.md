@@ -122,11 +122,6 @@ External Libraries
 	(for the license text see the APACHE_LICENSE file
 	or <http://www.apache.org/licenses/LICENSE-2.0>).
 
-* Google API Client Library
-  * From Internet* (maybe later added as a file under `assets/` etc)
-  * Website: <https://developers.google.com/api-client-library/java>
-  * License: ¯\\_(ツ)\_/¯ (I don't think there is any)
-
 * Additional external/modified libraries integrated under `src/chatty/` have license/source
   information in the file header
 

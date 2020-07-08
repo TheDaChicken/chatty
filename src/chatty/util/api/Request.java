@@ -1,21 +1,14 @@
 package chatty.util.api;
 
-import chatty.gui.components.settings.GenericComboSetting;
-
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.net.*;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
-public class Request {
+public class Request implements Runnable {
     /*
         Request something
      */
@@ -32,16 +25,27 @@ public class Request {
     public String REQUEST_METHOD = "GET";
     public String URL;
     public HashMap<String, String> HEADERS;
+    public List<HttpCookie> COOKIES;
+    public RequestResult REQUEST_RESULT;
 
-    public Request(String REQUEST_METHOD, String URL, HashMap<String, String> HEADERS) {
+    public Request(String REQUEST_METHOD, String URL, HashMap<String, String> HEADERS, List<HttpCookie> COOKIES, RequestResult REQUEST_RESULT) {
         this.REQUEST_METHOD = REQUEST_METHOD;
         this.URL = URL;
         this.HEADERS = HEADERS;
+        this.COOKIES = COOKIES;
+        this.REQUEST_RESULT = REQUEST_RESULT;
     }
 
-    public String execute() {
-        Charset charset = StandardCharsets.UTF_8;
-        java.net.URL url;
+    public String getCookieHeaderValue() {
+        StringBuilder string = new StringBuilder("");
+        for (HttpCookie cookie : this.COOKIES) {
+            string.append(cookie.getName() + "=" + cookie.getValue() + ";");
+        }
+        return string.toString();
+    }
+
+    public RequestResponse execute() {
+        URL url;
         HttpURLConnection connection = null;
 
         try {
@@ -50,7 +54,7 @@ public class Request {
             connection.setConnectTimeout(CONNECT_TIMEOUT);
             connection.setReadTimeout(READ_TIMEOUT);
             connection.setRequestMethod(REQUEST_METHOD);
-
+            connection.setRequestProperty("cookie", getCookieHeaderValue());
 
             connection.setRequestProperty("Accept-Encoding", "gzip");
 
@@ -58,28 +62,29 @@ public class Request {
                 connection.setRequestProperty(entrySet.getKey(), entrySet.getValue());
             }
 
-            // Read response
-            InputStream input = connection.getInputStream();
+            InputStream stream = connection.getErrorStream();
+            if (stream == null) {
+                stream = connection.getInputStream();
+            }
             if ("gzip".equals(connection.getContentEncoding())) {
-                input = new GZIPInputStream(input);
+                stream = new GZIPInputStream(stream);
             }
-
-            StringBuilder response;
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(input, charset))) {
-                String line;
-                response = new StringBuilder();
-                while ((line = reader.readLine()) != null) {
-                    response.append(line);
-                }
-            }
-            return response.toString();
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
+            return new RequestResponse(connection.getResponseCode(), stream);
         } catch (IOException e) {
             e.printStackTrace();
         }
         return null;
     }
 
+    @Override
+    public void run() {
+        RequestResponse response = execute();
+        if(REQUEST_RESULT != null) {
+            REQUEST_RESULT.requestResult(response);
+        }
+    }
 
+    public interface RequestResult {
+        void requestResult(RequestResponse response);
+    }
 }

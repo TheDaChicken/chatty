@@ -2,7 +2,7 @@ package chatty;
 
 import chatty.gui.colors.UsercolorManager;
 import chatty.util.StringUtil;
-import chatty.util.api.YouTubeApi;
+import chatty.util.api.YouTubeWeb;
 import chatty.util.api.usericons.UsericonManager;
 import chatty.util.irc.MsgTags;
 import chatty.util.settings.Settings;
@@ -32,7 +32,7 @@ public class YouTubeConnection {
     private final Set<String> openChannels = Collections.synchronizedSet(new HashSet<String>());
 
     /**
-     * The username to send to the server. This is stored to reconnect.
+     * The channel_id to send to the server. This is stored to reconnect.
      */
     private volatile String channel_id;
 
@@ -43,22 +43,19 @@ public class YouTubeConnection {
 
     private final RoomManager rooms;
 
-    private final YouTubeLiveChat liveChat;
+    private final YouTubeLiveChats liveChat;
 
     private final SpamProtection spamProtection;
     private final ChannelStateManager channelStates = new ChannelStateManager();
 
     private final SentMessages sentMessages = new SentMessages();
 
-    private final YouTubeApi api;
-
     public YouTubeConnection(final ConnectionListener listener, Settings settings,
-                             String label, RoomManager rooms, YouTubeApi api) {
-        liveChat = new YouTubeLiveChatHandler(label, api);
+                             String label, RoomManager rooms, YouTubeWeb web) {
+        liveChat = new YouTubeLiveChatClass(label, web);
         this.listener = listener;
         this.settings = settings;
         this.rooms = rooms;
-        this.api = api;
         spamProtection = new SpamProtection();
         spamProtection.setLinesPerSeconds(settings.getString("spamProtection"));
         //users.setCapitalizedNames(settings.getBoolean("capitalizedNames"));
@@ -109,6 +106,10 @@ public class YouTubeConnection {
         return users.getUserIfExists(channel, channel_id);
     }
 
+    public User getLocalUser(String channel) {
+        return users.getUser(rooms.getRoom(channel), channel_id, "");
+    }
+
     /**
      * The channel_id used for the last connection.
      *
@@ -117,7 +118,6 @@ public class YouTubeConnection {
     public String getChannelID() {
         return channel_id;
     }
-
 
     public Set<String> getOpenChannels() {
         synchronized(openChannels) {
@@ -206,7 +206,7 @@ public class YouTubeConnection {
      * @param password The password
      * @param autojoin The channels to join after connecting
      */
-    public void prepareAutoJoin(String channel_id, String[] autojoin) {
+    public void autoJoinChannels(String channel_id, String[] autojoin) {
         this.channel_id = channel_id;
         this.autojoin = autojoin;
         users.setLocalChannelID(channel_id);
@@ -218,7 +218,7 @@ public class YouTubeConnection {
      * connect it not already connected/connecting.
      */
     private void start() {
-        if (liveChat.getState() <= YouTubeLiveChat.STATE_NONE) {
+        if (liveChat.getState() <= YouTubeLiveChats.STATE_NONE) {
             liveChat.connect();
         } else {
             listener.onConnectError("Already enabled.");
@@ -313,7 +313,7 @@ public class YouTubeConnection {
      * IRC Connection which handles the messages (manages users, special
      * messages etc.) and redirects them to the listener accordingly.
      */
-    private class YouTubeLiveChatHandler extends YouTubeLiveChat {
+    private class YouTubeLiveChatClass extends YouTubeLiveChats {
         /**
          * Channels that this connection has joined. This is per connection, so
          * the main and secondary connection have different data here.
@@ -337,8 +337,8 @@ public class YouTubeConnection {
         private Set<String> userlistReceived = Collections.synchronizedSet(
                 new HashSet<String>());
 
-        public YouTubeLiveChatHandler(String id, YouTubeApi api) {
-            super(id, api);
+        public YouTubeLiveChatClass(String id, YouTubeWeb web) {
+            super(id, web);
             this.idPrefix= "["+id+"] ";
         }
 
@@ -431,6 +431,64 @@ public class YouTubeConnection {
         }
 
         @Override
+        void onNotice(String nick, String from, String text) {
+            if (this != liveChat) {
+                return;
+            }
+            // Should only be from the server for now
+            listener.onNotice(text);
+        }
+
+        @Override
+        void onNotice(String channel, String text, MsgTags tags) {
+            if (this != liveChat) {
+                return;
+            }
+            if (tags.isValue("msg-id", "whisper_invalid_login")) {
+                listener.onInfo(text);
+            } else if (onChannel(channel)) {
+                infoMessage(channel, text, tags);
+            } else if (isChannelOpen(channel)) {
+                infoMessage(channel, text, tags);
+
+                Room room = rooms.getRoom(channel);
+                if (room.isChatroom()) {
+                    if (tags.isValue("msg-id", "no_permission")) {
+                        info(room, "Cancelled trying to join channel.", null);
+                        //joinChecker.cancel(channel);
+                    }
+                }
+            } else {
+                listener.onInfo(String.format("[Info/%s] %s", rooms.getRoom(channel), text));
+            }
+        }
+
+
+        @Override
+        void onQueryMessage(String nick, String from, String text) {
+            if (this != liveChat) {
+                return;
+            }
+            if (nick.startsWith("*")) {
+                listener.onSpecialMessage(nick, text);
+            }
+            if (nick.equals("jtv")) {
+                listener.onInfo("[Info] "+text);
+            }
+        }
+
+        /**
+         * Any kind of info message. This can be either from jtv (legacy) or the
+         * new NOTICE messages to the channel.
+         *
+         * @param channel
+         * @param text
+         */
+        private void infoMessage(String channel, String text, MsgTags tags) {
+            info(channel, "[Info] " + text, tags);
+        }
+
+        @Override
         void onUsernotice(String channel, String message, MsgTags tags) {
 
         }
@@ -458,6 +516,18 @@ public class YouTubeConnection {
                 openChannels.add(channel);
             }
         }
+
+        @Override
+        public void onClearMsg(MsgTags tags, String channel, String msg) {
+            String login = tags.get("login");
+            String targetMsgId = tags.get("target-msg-id");
+            if (!StringUtil.isNullOrEmpty(login, targetMsgId)) {
+                User user = users.getUserIfExists(channel, login);
+                if (user != null) {
+                    listener.onMsgDeleted(user, targetMsgId, msg);
+                }
+            }
+        }
     }
 
     /**
@@ -483,6 +553,17 @@ public class YouTubeConnection {
         return user;
     }
 
+    public void info(String channel, String message, MsgTags tags) {
+        listener.onInfo(rooms.getRoom(channel), message, tags);
+    }
+
+    public void info(Room room, String message, MsgTags tags) {
+        listener.onInfo(room, message, tags);
+    }
+
+    public void info(String message) {
+        listener.onInfo(message);
+    }
 
     public interface ConnectionListener {
 

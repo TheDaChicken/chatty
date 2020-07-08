@@ -1,6 +1,9 @@
 package chatty.util.api;
 
+import java.net.HttpCookie;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /*
     Builder for Requesting stuff from the Internet.
@@ -13,6 +16,8 @@ public class RequestBuilder {
     public String REQUEST_METHOD = "GET";
     public String URL;
     public HashMap<String, String> HEADERS = new HashMap<>();
+    public List<HttpCookie> COOKIES = new ArrayList<>();
+    public Request.RequestResult REQUEST_RESULT;
 
     public RequestBuilder(String url) {
         this.URL = url;
@@ -33,13 +38,23 @@ public class RequestBuilder {
         return this;
     }
 
+    public RequestBuilder setCookies(List<HttpCookie> cookies) {
+        this.COOKIES = cookies;
+        return this;
+    }
+
+    public RequestBuilder setRequestResult(Request.RequestResult requestResult) {
+        this.REQUEST_RESULT = requestResult;
+        return this;
+    }
+
     public Request build() {
         if(!this.HEADERS.containsKey("User-Agent")) {
             this.HEADERS.put("User-Agent", DEFAULT_USER_AGENT);
         }
 
 
-        return new Request(this.REQUEST_METHOD, this.URL, this.HEADERS);
+        return new Request(this.REQUEST_METHOD, this.URL, this.HEADERS, this.COOKIES, this.REQUEST_RESULT);
     }
 
 

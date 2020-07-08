@@ -3,17 +3,13 @@ package chatty.gui.components;
 
 import chatty.gui.MainGui;
 import chatty.lang.Language;
-import chatty.util.api.TokenInfo;
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionListener;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -46,7 +42,7 @@ public class TokenDialog extends JDialog {
     private final JButton done = new JButton(Language.getString("dialog.button.close"));
     
     private String currentUsername = "";
-    private GoogleCredential currentGoogleCredential = null;
+    private String currentCookies = null;
     
     public TokenDialog(MainGui owner) {
         super(owner, Language.getString("login.title"), true);
@@ -74,13 +70,7 @@ public class TokenDialog extends JDialog {
         access.setLayout(new GridBagLayout());
         GridBagConstraints gbc2 = new GridBagConstraints();
         gbc2.anchor = GridBagConstraints.WEST;
-        for (TokenInfo.Scope scope : TokenInfo.Scope.values()) {
-            JLabel label = new JLabel(scope.label);
-            label.setToolTipText(scope.description);
-            accessScopes.put(scope.scope, label);
-            gbc2.gridy++;
-            access.add(label, gbc2);
-        }
+
         gbc = makeGridBagConstraints(0,3,2,1,GridBagConstraints.CENTER,new Insets(0,5,5,5));
         add(access, gbc);
         
@@ -134,7 +124,7 @@ public class TokenDialog extends JDialog {
     }
     
     public void update() {
-        boolean empty = currentUsername.isEmpty() || currentGoogleCredential == null;
+        boolean empty = currentUsername.isEmpty() || currentCookies == null;
         deleteToken.setVisible(!empty);
         requestToken.setVisible(empty);
         verifyToken.setVisible(!empty);
@@ -142,38 +132,16 @@ public class TokenDialog extends JDialog {
         pack();
     }
     
-    public void update(String username, GoogleCredential currentToken) {
+    public void update(String username, String cookies) {
         this.currentUsername = username;
-        this.currentGoogleCredential = currentToken;
-        if (currentUsername.isEmpty() || currentToken == null) {
+        this.currentCookies = cookies;
+        if (currentUsername.isEmpty() || cookies.isEmpty()) {
             name.setText(Language.getString("login.createLogin"));
         }
         else {
             name.setText(currentUsername);
         }
         //setTokenInfo("");
-        update();
-    }
-    
-    /**
-     * Update the text showing what scopes are available.
-     * 
-     * @param scopes
-     */
-    public void updateAccess(Collection<String> scopes) {
-        boolean empty = currentUsername.isEmpty() || currentGoogleCredential == null;
-        access.setVisible(!empty);
-        accessLabel.setVisible(!empty);
-
-        for (TokenInfo.Scope s : TokenInfo.Scope.values()) {
-            JLabel label = accessScopes.get(s.scope);
-            boolean enabled = scopes.contains(s.scope);
-            if (enabled) {
-                label.setIcon(OK_IMAGE);
-            } else {
-                label.setIcon(NO_IMAGE);
-            }
-        }
         update();
     }
     

@@ -4,16 +4,16 @@ import static chatty.Logging.USERINFO;
 import chatty.lang.Language;
 import chatty.util.DateTime;
 import chatty.util.DelayedActionQueue;
-import chatty.util.api.YouTubeApi;
+import chatty.util.api.YouTubeWeb;
 import chatty.util.irc.MsgParameters;
 import chatty.util.irc.MsgTags;
 
 import java.util.HashMap;
 import java.util.logging.Logger;
 
-public abstract class YouTubeLiveChat {
+public abstract class YouTubeLiveChats {
 
-    private static final Logger LOGGER = Logger.getLogger(YouTubeLiveChat.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(YouTubeLiveChats.class.getName());
 
     /**
      * Delay between JOINs (in milliseconds).
@@ -39,43 +39,15 @@ public abstract class YouTubeLiveChat {
      */
     public static final int STATE_ENABLED = 2;
 
-    /**
-     * Disconnect reason value for Unknown host.
-     */
-    public static final int ERROR_UNKNOWN_HOST = 100;
-    /**
-     * Disconnect reason value for socket timeout.
-     */
-    public static final int ERROR_SOCKET_TIMEOUT = 101;
-    /**
-     * Disconnect reason value for socket error.
-     */
-    public static final int ERROR_SOCKET_ERROR = 102;
-    /**
-     * Disconnect reason value for requested disconnect, meaning the user
-     * wanted to disconnect from the server.
-     */
-    public static final int REQUESTED_DISCONNECT = 103;
-    /**
-     * Disconnect reason value for when the connection was closed.
-     */
-    public static final int ERROR_CONNECTION_CLOSED = 104;
-
-    public static final int ERROR_REGISTRATION_FAILED = 105;
-
-    public static final int REQUESTED_RECONNECT = 106;
-
-    public static final int SSL_ERROR = 107;
-
     private final String id;
     private final String idPrefix;
 
-    private final YouTubeApi api;
+    private final YouTubeWeb web;
 
-    public YouTubeLiveChat(String id, YouTubeApi api) {
+    public YouTubeLiveChats(String id, YouTubeWeb web) {
         this.id = id;
         this.idPrefix = "["+id+"] ";
-        this.api = api;
+        this.web = web;
     }
 
     private void info(String message) {
@@ -166,7 +138,7 @@ public abstract class YouTubeLiveChat {
      */
     public void joinChannelImmediately(String channel_identifier) {
         if (state >= STATE_ENABLED) {
-            YouTubeChannelRunnable channelRunnable = new YouTubeChannelRunnable(this, api);
+            YouTubeChannelRunnable channelRunnable = new YouTubeChannelRunnable(web, this);
             onJoinAttempt(channel_identifier);
             int result = channelRunnable.loadInformation(channel_identifier);
             if(result == 0) {
@@ -209,7 +181,7 @@ public abstract class YouTubeLiveChat {
      */
     protected void fake_connected() {
         this.connectedSince = System.currentTimeMillis();
-        setState(YouTubeLiveChat.STATE_ENABLED);
+        setState(YouTubeLiveChats.STATE_ENABLED);
         onConnect();
         onRegistered();
     }
@@ -232,7 +204,7 @@ public abstract class YouTubeLiveChat {
         // Retrieve state before changing it, but must be changed before calling
         // onDisconnect() which might check the state when trying to reconnect
         int oldState = getState();
-        setState(YouTubeLiveChat.STATE_NONE);
+        setState(YouTubeLiveChats.STATE_NONE);
     }
 
     /**

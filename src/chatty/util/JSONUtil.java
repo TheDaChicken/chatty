@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 /**
  *
@@ -98,6 +100,18 @@ public class JSONUtil {
             o.add(a);
         }
         return o.toJSONString();
+    }
+
+    public static JSONObject parseJSON(String json) {
+        JSONParser parser = new JSONParser();
+        JSONObject root = null;
+        try {
+            root = (JSONObject)parser.parse(json);
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return root;
     }
     
 }

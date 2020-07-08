@@ -11,7 +11,6 @@ import chatty.util.DateTime;
 import chatty.util.Debugging;
 import chatty.util.StringUtil;
 import chatty.util.api.ChannelInfo;
-import chatty.util.api.YouTubeApi;
 import chatty.util.commands.CustomCommand;
 import java.awt.Color;
 import java.awt.Component;

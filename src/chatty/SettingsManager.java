@@ -170,13 +170,12 @@ public class SettingsManager {
         settings.setFile("username", loginFile);
         settings.addString("userid", "");
         settings.setFile("userid", loginFile);
-        settings.addString("password", "", false);
         settings.addBoolean("connectOnStartup", false, false);
         settings.addLong("onStart", 1);
         settings.addString("autojoinChannel", "");
         settings.addString("previousChannel", "");
-        settings.addString("tokens","");
-        settings.setFile("tokens", loginFile);
+        settings.addString("cookies","");
+        settings.setFile("cookies", loginFile);
         settings.addBoolean("allowTokenOverride", false);
         settings.addBoolean("foreignToken", false);
         // Don't save setting, login with password isn't possible anymore

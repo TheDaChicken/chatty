@@ -898,47 +898,12 @@ public class User implements Comparable<User> {
     private int makeScore(long time) {
         int ago = (int)(System.currentTimeMillis() - time) / 1000;
         int result = 1000 - ago / 120;
-        return result < 0 ? 0 : result;
+        return Math.max(result, 0);
     }
 
     public synchronized void setHighlighted() {
         lastHighlight = System.currentTimeMillis();
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     public static class Message {
 

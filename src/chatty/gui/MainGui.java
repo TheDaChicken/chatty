@@ -26,7 +26,6 @@ import chatty.lang.Language;
 import chatty.util.ChattyMisc;
 import chatty.util.CopyMessages;
 import chatty.util.ElapsedTime;
-import chatty.util.StringUtil;
 import chatty.util.api.*;
 import chatty.util.api.usericons.Usericon;
 import chatty.util.commands.CustomCommand;
@@ -37,10 +36,10 @@ import chatty.util.settings.FileManager;
 import chatty.util.settings.Setting;
 import chatty.util.settings.SettingChangeListener;
 import chatty.util.settings.Settings;
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.net.HttpCookie;
 import java.util.*;
 import java.util.List;
 import java.util.logging.Level;
@@ -67,7 +66,7 @@ public class MainGui extends JFrame implements Runnable {
     private TokenDialog tokenDialog;
     private DebugWindow debugWindow;
     private UserInfoManager userInfoDialog;
-    private TokenGetDialog tokenGetDialog;
+    private CookiesPasteDialog cookiesPasteDialog;
     private About aboutDialog;
     private SettingsDialog settingsDialog;
     private HighlightedMessages highlightedMessages;
@@ -158,7 +157,7 @@ public class MainGui extends JFrame implements Runnable {
         connectionDialog = new ConnectionDialog(this);
         GuiUtil.installEscapeCloseOperation(connectionDialog);
         tokenDialog = new TokenDialog(this);
-        tokenGetDialog = new TokenGetDialog(this);
+        cookiesPasteDialog = new CookiesPasteDialog(this);
         userInfoDialog = new UserInfoManager(this, client.settings, contextMenuListener);
         aboutDialog = new About();
         setHelpWindowIcons();
@@ -398,11 +397,8 @@ public class MainGui extends JFrame implements Runnable {
             setExtendedState(MAXIMIZED_BOTH);
         }
 
-        String tokens = client.settings.getString("tokens");
-        client.api.setGoogleCredential(YouTubeAuth.getJsonCredentials(tokens));
-        //if (client.settings.getList("scopes").isEmpty()) {
-        //    //client.api.checkToken();
-        //}
+        String cookies = client.settings.getString("cookies");
+        client.web.setCookies(Cookies.loadCookies(cookies));
     }
 
     public void startUpdatingState() {
@@ -457,13 +453,10 @@ public class MainGui extends JFrame implements Runnable {
                 channels.setInitialFocus();
             } else if (source == connectionDialog.getConnectButton()
                     || source == connectionDialog.getChannelInput()) {
-                String password = connectionDialog.getPassword();
                 String channel = connectionDialog.getChannel();
-                //client.settings.setString("username",name);
-                client.settings.setString("password", password);
                 client.settings.setString("channel", channel);
-                // AUTOJOIN* CHANNELS
-                if (client.prepareChannels(connectionDialog.rejoinOpenChannels())) {
+                // Just autojoins channels with without any checking.
+                if (client.prepareConnection(connectionDialog.rejoinOpenChannels())) {
                     connectionDialog.setVisible(false);
                     channels.setInitialFocus();
                 }
@@ -497,29 +490,29 @@ public class MainGui extends JFrame implements Runnable {
                     //client.api.revokeToken(client.settings.getString("token"));
                 }
                 if (result == 0 || result == 1) {
-                    client.settings.setString("token", "");
+                    client.settings.setString("cookies", "");
                     client.settings.setBoolean("foreignToken", false);
                     client.settings.setString("username", "");
                     client.settings.setString("userid", "");
                     client.settings.listClear("scopes");
                     updateConnectionDialog(null);
                     tokenDialog.update("", null);
-                    updateTokenScopes();
                 }
             } else if (event.getSource() == tokenDialog.getRequestTokenButton()) {
-                tokenGetDialog.setLocationRelativeTo(tokenDialog);
-                tokenGetDialog.reset();
-                client.startWebserver();
-                tokenGetDialog.setVisible(true);
+                cookiesPasteDialog.setLocationRelativeTo(tokenDialog);
+                cookiesPasteDialog.ready();
+                cookiesPasteDialog.setVisible(true);
 
             } else if (event.getSource() == tokenDialog.getDoneButton()) {
                 tokenDialog.setVisible(false);
             } else if (event.getSource() == tokenDialog.getVerifyTokenButton()) {
-                String tokens = client.settings.getString("tokens");
-                verifyToken(YouTubeAuth.getJsonCredentials(tokens));
+                String cookies = client.settings.getString("cookies");
+                verifyCookies(cookies, Cookies.loadCookies(cookies));
             } // Get token Dialog
-            else if (event.getSource() == tokenGetDialog.getCloseButton()) {
+            else if (event.getSource() == cookiesPasteDialog.getCloseButton()) {
                 tokenGetDialogClosed();
+            } else if(event.getSource() == cookiesPasteDialog.getSaveButton()) {
+                cookiesReceived(cookiesPasteDialog.getJsonString());
             }
         }
     }
@@ -528,19 +521,20 @@ public class MainGui extends JFrame implements Runnable {
     /**
      * Verify the given Token. This sends a request to the TwitchAPI.
      *
-     * @param token
+     * @param cookies
      */
-    private void verifyToken(GoogleCredential token) {
-        client.api.verifyToken(token);
+    private void verifyCookies(String cookies, List<HttpCookie> parsed_cookies) {
+        // TODO do stuff with verify token to get channel id & username of logged in either with cookies etc
+        client.web.verifyCookies(cookies, parsed_cookies);
         tokenDialog.verifyingToken();
     }
 
-    public void tokenVerified(final GoogleCredential token, final TokenInfo tokenInfo) {
+    public void cookiesVerified(final String cookies, final TokenInfo tokenInfo) {
         SwingUtilities.invokeLater(new Runnable() {
 
             @Override
             public void run() {
-                tokenVerifiedInternal(token, tokenInfo);
+                cookiesVerifiedInternal(cookies, tokenInfo);
             }
         });
     }
@@ -562,20 +556,19 @@ public class MainGui extends JFrame implements Runnable {
      *      is null then an error occured, if it is empty then the token was
      *      invalid.
      */
-    private void tokenVerifiedInternal(GoogleCredential credential, TokenInfo tokenInfo) {
+    private void cookiesVerifiedInternal(String cookies, TokenInfo tokenInfo) {
         // Stopping the webserver here, because it allows the /tokenreceived/
         // page to be delievered, because of the delay of verifying the token.
         // This should probably be solved better.
-        client.stopWebserver();
 
         String result;
         String currentUsername = client.settings.getString("username");
         // Check if a new token was requested (the get token dialog should still
         // be open at this point) If this is wrong, it just displays the wrong
         // text, this shouldn't be used for something critical.
-        boolean getNewLogin = tokenGetDialog.isVisible();
+        boolean getNewLogin = cookiesPasteDialog.isVisible();
         boolean showInDialog = tokenDialog.isVisible();
-        boolean changedTokenResponse = Objects.equals(credential, manuallyChangedToken);
+        boolean changedTokenResponse = Objects.equals(cookies, manuallyChangedToken);
         boolean valid = false;
         if (tokenInfo == null) {
             // An error occured when verifying the token
@@ -591,11 +584,11 @@ public class MainGui extends JFrame implements Runnable {
             if (getNewLogin) {
                 result = "Invalid token received when getting login data. Please "
                         + "try again.";
-                client.settings.setString("tokens", "");
+                client.settings.setString("cookies", "");
             }
             else if (changedTokenResponse) {
                 result = "Invalid token entered. Please try again.";
-                client.settings.setString("tokens", "");
+                client.settings.setString("cookies", "");
             }
             else {
                 result = "Login data invalid. [help:login-invalid What does this mean?]";
@@ -604,17 +597,17 @@ public class MainGui extends JFrame implements Runnable {
                 showTokenWarning();
             }
         }
-        else if (!tokenInfo.hasScope(TokenInfo.Scope.FULL_SCOPE)) {
-            result = "No chat access (required) with token.";
-        }
         else {
             // Everything is fine, so save username and token
             valid = true;
             String username = tokenInfo.name;
+            if(username == null) {
+                username = tokenInfo.userId;
+            }
             client.settings.setString("username", username);
             client.settings.setString("userid", tokenInfo.userId);
-            client.settings.setString("tokens", YouTubeAuth.CredentialsToJson(credential));
-            tokenDialog.update(username, credential);
+            client.settings.setString("cookies", cookies);
+            tokenDialog.update(username, cookies);
             updateConnectionDialog(null);
             if (!currentUsername.isEmpty() && !username.equals(currentUsername)) {
                 result = "Login verified and ready to connect (replaced '" +
@@ -628,28 +621,10 @@ public class MainGui extends JFrame implements Runnable {
             printLine(result);
             manuallyChangedToken = null;
         }
-        setTokenScopes(tokenInfo);
         // Always close the get token dialog, if it's not open, nevermind ;)
-        tokenGetDialog.setVisible(false);
+        cookiesPasteDialog.setVisible(false);
         // Show result in the token dialog
         tokenDialog.tokenVerified(valid, result);
-    }
-
-    /**
-     * Sets the token scopes in the settings based on the given TokenInfo.
-     *
-     * @param info
-     */
-    private void setTokenScopes(TokenInfo info) {
-        if (info == null) {
-            return;
-        }
-        if (info.valid) {
-            client.settings.putList("scopes", info.scopes);
-        } else {
-            client.settings.listClear("scopes");
-        }
-        updateTokenScopes();
     }
 
     public void showTokenWarning() {
@@ -672,36 +647,24 @@ public class MainGui extends JFrame implements Runnable {
         });
     }
 
-
-    /**
-     * Updates the token scopes in the GUI based on the settings.
-     */
-    private void updateTokenScopes() {
-        Collection<String> scopes = client.settings.getList("scopes");
-        tokenDialog.updateAccess(scopes);
-    }
-
     /**
      * Updates the connection dialog with current settings
      */
     private void updateConnectionDialog(String channelPreset) {
-        connectionDialog.setUsername(client.settings.getString("username"));
+        connectionDialog.setUsername(client.settings.getString("userid"));
         if (channelPreset != null) {
             connectionDialog.setChannel(channelPreset);
         } else {
             connectionDialog.setChannel(client.settings.getString("channel"));
         }
 
-        String password = client.settings.getString("password");
-        String tokens = client.settings.getString("tokens");
-        boolean usePassword = client.settings.getBoolean("usePassword");
-        connectionDialog.update(password, YouTubeAuth.getJsonCredentials(tokens), usePassword);
+        String cookies = client.settings.getString("cookies");
+        connectionDialog.update(cookies);
         connectionDialog.setAreChannelsOpen(channels.getChannelCount() > 0);
     }
 
     private void openTokenDialog() {
         updateTokenDialog();
-        updateTokenScopes();
         if (connectionDialog.isVisible()) {
             tokenDialog.setLocationRelativeTo(connectionDialog);
         } else {
@@ -711,9 +674,9 @@ public class MainGui extends JFrame implements Runnable {
     }
 
     private void updateTokenDialog() {
-        String username = client.settings.getString("username");
-        String tokens = client.settings.getString("tokens");
-        tokenDialog.update(username, YouTubeAuth.getJsonCredentials(tokens));
+        String userid = client.settings.getString("userid");
+        String tokens = client.settings.getString("cookies");
+        tokenDialog.update(userid, tokens);
         tokenDialog.setForeignToken(client.settings.getBoolean("foreignToken"));
     }
 
@@ -849,6 +812,50 @@ public class MainGui extends JFrame implements Runnable {
             client.chatLog.info(channel.getFilename(), message.text);
         }
         return true;
+    }
+
+    /**
+     * Calls the appropriate method from the given channel
+     *
+     * @param channel The channel this even has happened in.
+     * @param type The type of event.
+     * @param user The User object of who was the target of this event (mod/..).
+     */
+    public void printCompact(final String type, final User user) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                channels.getChannel(user.getRoom()).printCompact(type, user);
+            }
+        });
+    }
+
+    /**
+     * Perform search in the currently selected channel. Should only be called
+     * from the EDT.
+     *
+     * @param window
+     * @param searchText
+     * @return
+     */
+    public boolean search(final Window window, final String searchText) {
+        Channel chan = channels.getChannelFromWindow(window);
+        if (chan == null) {
+            return false;
+        }
+        return chan.search(searchText);
+    }
+
+    public void resetSearch(final Window window) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                Channel chan = channels.getChannelFromWindow(window);
+                if (chan != null) {
+                    chan.resetSearch();
+                }
+            }
+        });
     }
 
     public void showMessage(final String message) {
@@ -1047,13 +1054,13 @@ public class MainGui extends JFrame implements Runnable {
          * @param state
          */
         private void updateMenuState(int state) {
-            if (state > YouTubeLiveChat.STATE_NONE) {
+            if (state > YouTubeLiveChats.STATE_NONE) {
                 menu.getMenuItem("connect").setEnabled(false);
             } else {
                 menu.getMenuItem("connect").setEnabled(true);
             }
 
-            if (state > YouTubeLiveChat.STATE_NONE) {
+            if (state > YouTubeLiveChats.STATE_NONE) {
                 menu.getMenuItem("disconnect").setEnabled(true);
             } else {
                 menu.getMenuItem("disconnect").setEnabled(false);
@@ -1134,7 +1141,7 @@ public class MainGui extends JFrame implements Runnable {
 
         @Override
         public void windowClosing(WindowEvent e) {
-            if (e.getSource() == tokenGetDialog) {
+            if (e.getSource() == cookiesPasteDialog) {
                 tokenGetDialogClosed();
             }
         }
@@ -1334,6 +1341,32 @@ public class MainGui extends JFrame implements Runnable {
         return ownUsername != null && ownUsername.equalsIgnoreCase(channel_id);
     }
 
+    public void msgDeleted(final User user, String targetMsgId, String msg) {
+        SwingUtilities.invokeLater(() -> {
+            channels.getChannel(user.getRoom()).userBanned(user, -2, null, targetMsgId);
+            user.addMsgDeleted(targetMsgId, msg);
+            updateUserInfoDialog(user);
+            if (client.settings.listContains("streamChatChannels", user.getChannel())) {
+                streamChat.userBanned(user, -2, null, targetMsgId);
+            }
+        });
+    }
+
+    public void userBanned(final User user, final long duration, final String reason, final String id) {
+        SwingUtilities.invokeLater(new Runnable() {
+
+            @Override
+            public void run() {
+                channels.getChannel(user.getRoom()).userBanned(user, duration, reason, id);
+                user.addBan(duration, reason, id);
+                updateUserInfoDialog(user);
+                if (client.settings.listContains("streamChatChannels", user.getChannel())) {
+                    streamChat.userBanned(user, duration, reason, id);
+                }
+            }
+        });
+    }
+
     /**
      * Checks the dedicated user ignore list. The regular ignore list may still
      * ignore the user.
@@ -1400,7 +1433,6 @@ public class MainGui extends JFrame implements Runnable {
             public void run() {
                 Channel chan;
                 String channel = user.getChannel();
-                boolean whisper = false;
                 int bitsAmount = tags.getBits();
                 User localUser = client.getLocalUser(channel);
 
@@ -1408,8 +1440,8 @@ public class MainGui extends JFrame implements Runnable {
                 // If channel was changed from the given one, change accordingly
                 channel = chan.getChannel();
 
-                boolean isOwnMessage = isOwnChannelID(user.getId()) || (whisper && action);
-                boolean ignoredUser = (userIgnored(user, whisper) && !isOwnMessage);
+                boolean isOwnMessage = isOwnChannelID(user.getId()) || (action);
+                boolean ignoredUser = (userIgnored(user, false) && !isOwnMessage);
                 boolean ignored = checkMsg(ignoreList, "ignore", text, user, localUser, tags, isOwnMessage) || ignoredUser;
 
                 if (!ignored || client.settings.getBoolean("logIgnored")) {
@@ -1437,7 +1469,7 @@ public class MainGui extends JFrame implements Runnable {
                     notificationManager.highlight(user, localUser, text, tags,
                             highlighter.getLastMatchNoNotification(),
                             highlighter.getLastMatchNoSound(),
-                            isOwnMessage, whisper, bitsAmount > 0);
+                            isOwnMessage, false, bitsAmount > 0);
                 } else if (!ignored) {
                     notificationManager.message(user, localUser, text, tags, isOwnMessage,
                             bitsAmount > 0);
@@ -1455,7 +1487,7 @@ public class MainGui extends JFrame implements Runnable {
                         ignoreMatches = ignoreList.getLastTextMatches();
                     }
                     ignoredMessages.addMessage(channel, user, text, action,
-                            tagEmotes, 0, whisper, ignoreMatches);
+                            tagEmotes, 0, false, ignoreMatches);
                     ignoredMessagesHelper.ignoredMessage(channel);
                 }
                 long ignoreMode = client.settings.getLong("ignoreMode");
@@ -1492,7 +1524,7 @@ public class MainGui extends JFrame implements Runnable {
                         }
                     }
 
-                    message.whisper = whisper;
+                    message.whisper = false;
                     message.action = action;
                     if (highlighted || hlByPoints) {
                         // Only set message.highlighted instead of highlighted
@@ -1846,6 +1878,16 @@ public class MainGui extends JFrame implements Runnable {
         }
     }
 
+
+    /**
+     * Puts the updated state of the windows/dialogs/popouts into the settings.
+     */
+    public void saveWindowStates() {
+        userInfoDialog.aboutToSaveSettings();
+        windowStateManager.saveWindowStates();
+        client.settings.putList("popoutAttributes", channels.getPopoutAttributes());
+    }
+
     /**
      * Reopen some windows if enabled.
      */
@@ -1866,59 +1908,29 @@ public class MainGui extends JFrame implements Runnable {
         }
     }
 
-    public void webserverStarted() {
-        SwingUtilities.invokeLater(new Runnable() {
-
-            @Override
-            public void run() {
-                if (tokenGetDialog.isVisible()) {
-                    tokenGetDialog.ready();
-                }
-            }
-        });
-    }
-
-    public void webserverError(final String error) {
-        SwingUtilities.invokeLater(new Runnable() {
-
-            @Override
-            public void run() {
-                if (tokenGetDialog.isVisible()) {
-                    tokenGetDialog.error(error);
-                }
-            }
-        });
-    }
-
-    public void webserverCodeReceived(final GoogleCredential credential) {
-        SwingUtilities.invokeLater(new Runnable() {
-
-            @Override
-            public void run() {
-                tokenReceived(credential);
-            }
-        });
-    }
-
     private void tokenGetDialogClosed() {
-        tokenGetDialog.setVisible(false);
-        client.stopWebserver();
+        cookiesPasteDialog.setVisible(false);
     }
 
     /**
-     * Token received from the webserver.
+     * Token received from input.
      *
-     * @param credential
+     * @param cookies_json
      */
-    private void tokenReceived(GoogleCredential credential) {
-        client.settings.setString("tokens", YouTubeAuth.CredentialsToJson(credential));
-        client.settings.setBoolean("foreignToken", false);
-        if (tokenGetDialog.isVisible()) {
-            tokenGetDialog.tokenReceived();
+    private void cookiesReceived(String cookies_json) {
+        List<HttpCookie> cookies = Cookies.loadCookies(cookies_json);
+        if(cookies == null) {
+            cookiesPasteDialog.failedParseCookies();
+            return;
         }
-        tokenDialog.update("", credential);
+        client.settings.setString("cookies", cookies_json);
+        client.settings.setBoolean("foreignToken", false);
+        if (cookiesPasteDialog.isVisible()) {
+            cookiesPasteDialog.cookiesReceived();
+        }
+        tokenDialog.update("", cookies_json);
         updateConnectionDialog(null);
-        verifyToken(credential);
+        verifyCookies(cookies_json, cookies);
     }
 
     private class MySettingChangeListener implements SettingChangeListener {
@@ -1948,8 +1960,8 @@ public class MainGui extends JFrame implements Runnable {
 
         private void settingChangedInternal(String setting, int type, Object value) {
             if (type == Setting.STRING) {
-                if(setting.equals("tokens")) {
-                    client.api.setGoogleCredential(YouTubeAuth.getJsonCredentials((String)value));
+                if(setting.equals("cookies")) {
+                    client.web.setCookies(Cookies.loadCookies((String) value));
                 }
             }
         }
@@ -1981,6 +1993,16 @@ public class MainGui extends JFrame implements Runnable {
             public void run() {
                 channels.removeChannel(channel);
                 state.update();
+            }
+        });
+    }
+
+    public void switchToChannel(final String channel) {
+        SwingUtilities.invokeLater(new Runnable() {
+
+            @Override
+            public void run() {
+                channels.switchToChannel(channel);
             }
         });
     }

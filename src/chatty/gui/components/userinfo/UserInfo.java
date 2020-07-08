@@ -11,7 +11,6 @@ import static chatty.gui.components.userinfo.Util.makeGbc;
 import chatty.lang.Language;
 import chatty.util.MiscUtil;
 import chatty.util.api.ChannelInfo;
-import chatty.util.api.YouTubeApi;
 import chatty.util.commands.CustomCommand;
 import chatty.util.commands.Parameters;
 import chatty.util.settings.Settings;

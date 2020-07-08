@@ -196,7 +196,7 @@ public class UserManager {
                 }
             }
             // Put User into the map for the channel
-            getUsersByChannel(room.getChannel()).put(name, user);
+            getUsersByChannel(room.getChannel()).put(channel_id, user);
         }
         return user;
     }
@@ -210,7 +210,6 @@ public class UserManager {
      * @return A Map with channel->User association
      */
     public synchronized HashMap<String,User> getChannelsAndUsersByUserName(String name) {
-        String lowercaseName = StringUtil.toLowerCase(name);
         HashMap<String,User> result = new HashMap<>();
 
         Iterator<Entry<String, HashMap<String, User>>> it = users.entrySet().iterator();
@@ -220,7 +219,7 @@ public class UserManager {
             String channelName = channel.getKey();
             HashMap<String,User> channelUsers = channel.getValue();
 
-            User user = channelUsers.get(lowercaseName);
+            User user = channelUsers.get(name);
             if (user != null) {
                 result.put(channelName,user);
             }

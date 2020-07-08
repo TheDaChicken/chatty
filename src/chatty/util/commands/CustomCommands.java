@@ -4,10 +4,7 @@ package chatty.util.commands;
 import chatty.Helper;
 import chatty.Room;
 import chatty.YouTubeClient;
-import chatty.util.DateTime;
 import chatty.util.StringUtil;
-import chatty.util.api.StreamInfo;
-import chatty.util.api.YouTubeApi;
 import chatty.util.settings.Settings;
 import java.util.Collection;
 import java.util.HashMap;
@@ -32,12 +29,10 @@ public class CustomCommands {
     private final Map<String, Map<String, CustomCommand>> replacements = new HashMap<>();
     
     private final Settings settings;
-    private final YouTubeApi api;
     private final YouTubeClient client;
     
-    public CustomCommands(Settings settings, YouTubeApi api, YouTubeClient client) {
+    public CustomCommands(Settings settings, YouTubeClient client) {
         this.settings = settings;
-        this.api = api;
         this.client = client;
     }
     
