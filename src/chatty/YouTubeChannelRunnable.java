@@ -89,9 +89,8 @@ public class YouTubeChannelRunnable implements Runnable {
 
     @Override
     public void run() {
-        LOGGER.info(lastResponse.getLiveChatContinuation().getViewerName());
-        lastResponse.getLiveChatContinuation().getPanel();
-
+        //LOGGER.info(lastResponse.getLiveChatContinuation().getViewerName());
+        //lastResponse.getLiveChatContinuation().getPanel();
 
         while(!stop) {
             for(LiveChatAction action : lastResponse.getLiveChatContinuation().getActions()) {
