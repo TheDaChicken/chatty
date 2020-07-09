@@ -113,5 +113,18 @@ public class JSONUtil {
         }
         return root;
     }
+
+
+    public static JSONArray parseJSONAsList(String json) {
+        JSONParser parser = new JSONParser();
+        JSONArray root = null;
+        try {
+            root = (JSONArray)parser.parse(json);
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return root;
+    }
     
 }

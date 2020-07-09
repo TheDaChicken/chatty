@@ -2,6 +2,7 @@ package chatty;
 
 import chatty.gui.colors.UsercolorManager;
 import chatty.util.StringUtil;
+import chatty.util.api.Emoticons;
 import chatty.util.api.YouTubeWeb;
 import chatty.util.api.usericons.UsericonManager;
 import chatty.util.irc.MsgTags;
@@ -104,6 +105,10 @@ public class YouTubeConnection {
 
     public User getExistingUser(String channel, String channel_id) {
         return users.getUserIfExists(channel, channel_id);
+    }
+
+    public User localUserJoined(String channel) {
+        return userJoined(channel, channel_id, null);
     }
 
     public User getLocalUser(String channel) {
@@ -411,7 +416,64 @@ public class YouTubeConnection {
         }
 
         private void updateUserFromTags(User user, MsgTags tags) {
+            if (tags.isEmpty()) {
+                return;
+            }
+            /*
+             * Any and all tag values may be null, so account for that when
+             * checking against them.
+             */
+            // Whether anything in the user changed to warrant an update
+            boolean changed = false;
 
+            Map<String, String> badges = Helper.parseBadges(tags.get("badges"));
+            if (user.setBadges(badges)) {
+                changed = true;
+            }
+
+            // Update color
+            String color = tags.get("color");
+            if (color != null && !color.isEmpty()) {
+                user.setColor(color);
+            }
+
+            // Update user status
+            boolean turbo = tags.isTrue("turbo") || badges.containsKey("turbo") || badges.containsKey("premium");
+            boolean subscriber = badges.containsKey("subscriber") || badges.containsKey("founder");
+            if (user.setSubscriber(subscriber)) {
+                changed = true;
+            }
+            if (user.setVip(badges.containsKey("vip"))) {
+                changed = true;
+            }
+            if (user.setModerator(badges.containsKey("moderator"))) {
+                changed = true;
+            }
+            if (user.setStaff(badges.containsKey("staff"))) {
+                changed = true;
+            }
+
+            // Temporarily check both for containing a value as Twitch is
+            // changing it
+//            String userType = tags.get("user-type");
+//            if (user.setModerator("mod".equals(userType))) {
+//                changed = true;
+//            }
+//            if (user.setStaff("staff".equals(userType))) {
+//                changed = true;
+//            }
+//            if (user.setAdmin("admin".equals(userType))) {
+//                changed = true;
+//            }
+//            if (user.setGlobalMod("global_mod".equals(userType))) {
+//                changed = true;
+//            }
+
+            user.setId(tags.get("user-id"));
+
+            if (changed && user != users.specialUser) {
+                listener.onUserUpdated(user);
+            }
         }
 
         @Override
@@ -507,6 +569,54 @@ public class YouTubeConnection {
          */
         public boolean isChannelOpen(String channel) {
             return openChannels.contains(channel);
+        }
+
+        @Override
+        public void onUserstate(String channel, MsgTags tags) {
+            if (onChannel(channel)) {
+                updateUserstate(channel, tags);
+            }
+        }
+
+        @Override
+        public void onGlobalUserstate(MsgTags tags) {
+            updateUserstate(null, tags);
+        }
+
+        private void updateUserstate(String channel, MsgTags tags) {
+            if (channel != null) {
+                /*
+                 * Update state for the local user in the given channel, also
+                 * assuming the user is now in that channel and thus adding the
+                 * user if necessary.
+                 */
+                User user = localUserJoined(channel);
+                updateUserFromTags(user, tags);
+            } else {
+                /*
+                 * Update all existing users with the local name, assuming that
+                 * all the state is global if no channel is given.
+                 */
+                for (User user : users.getUsersByChannelID(channel_id)) {
+                    updateUserFromTags(user, tags);
+                }
+            }
+
+            /**
+             * Update special user which can be used to initialize newly created
+             * local users on other channels. This may be necessary when some
+             * info is only being send in the GLOBALUSERSTATE command, which may
+             * not be send after every join or message.
+             *
+             * This may be updated with local and global info, however only the
+             * global info is used to initialize newly created local users.
+             */
+            updateUserFromTags(users.specialUser, tags);
+
+            //--------------------------
+            // Emotesets
+            //--------------------------
+            listener.onEmotesets(Emoticons.parseEmotesets(tags.get("emote-sets")));
         }
 
         @Override

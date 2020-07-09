@@ -1,5 +1,8 @@
 package chatty;
 
+import chatty.exceptions.PrivateStream;
+import chatty.exceptions.RegisterException;
+import chatty.exceptions.YouTube404;
 import chatty.util.api.YouTubeWeb;
 import chatty.util.api.youtubeObjects.LiveChat.LiveChatAction;
 import chatty.util.api.youtubeObjects.LiveChat.LiveChatMessages;
@@ -43,21 +46,18 @@ public class YouTubeChannelRunnable implements Runnable {
         } else {
             return FAILED;
         }
-
-        YouTubeLiveStream liveStream = null;
         try {
-            liveStream = web.getCurrentLiveStream(this.channel_id);
-        } catch (IOException e) {
-            e.printStackTrace();
+            YouTubeLiveStream liveStream = web.getCurrentLiveStream(this.channel_id);
+            if(liveStream == null) { // can be null after passing checks for 404 etc
+                return FAILED;
+            }
+            video_id = liveStream.getVideoDetails().video_id;
+            lastResponse = web.getLiveChatPage(liveStream.getContinuation().getTimedContinuationData().getContinuation());
+            continuation = lastResponse.getLiveChatContinuation().getTimedContinuationData().getContinuation();
+            return OKAY;
+        } catch (PrivateStream | RegisterException | YouTube404 privateStream) {
             return FAILED;
         }
-        if(liveStream == null) {
-            return FAILED;
-        }
-        video_id = liveStream.getVideoDetails().video_id;
-        lastResponse = web.getLiveChatPage(liveStream.getContinuation().getTimedContinuationData().getContinuation());
-        continuation = lastResponse.getLiveChatContinuation().getTimedContinuationData().getContinuation();
-        return OKAY;
     }
 
     public void handleAction(LiveChatAction action) {
@@ -66,23 +66,33 @@ public class YouTubeChannelRunnable implements Runnable {
             tags_map.put("id", action.getId());
         }
         MsgTags tags = new MsgTags(tags_map);
-        if(action.getType().equalsIgnoreCase("liveChatTextMessageRenderer")) {
-            handler.onChannelMessage(channel_id, action.getAuthorDetails().getChannelId(), action.getAuthorDetails().getName(), action.getMessage().toString(), tags, false);
-            messageIds.put(action.getId(), action.getAuthorDetails().getChannelId());
-        }
-        if (action.getType().equalsIgnoreCase("liveChatViewerEngagementMessageRenderer")) {
-            handler.onNotice(channel_id, action.getMessage().toString(), tags);
-        }
-        if(action.getType().equalsIgnoreCase("markChatItemAsDeletedAction")) {
-            tags_map.put("target-msg-id", action.getTargetMessageId());
-            tags_map.put("login", messageIds.get(action.getTargetMessageId()));
-            handler.onClearMsg(tags, channel_id, "haha deleted");
+        switch(action.getType()) {
+            case "liveChatTextMessageRenderer": {
+                // Parse Badges from JSON
+                tags_map.put("badges", action.getAuthorDetails().getBadges().toJSONString());
+                handler.onChannelMessage(channel_id, action.getAuthorDetails().getChannelId(), action.getAuthorDetails().getName(), action.getMessage().toString(), tags, false);
+                messageIds.put(action.getId(), action.getAuthorDetails().getChannelId());
+                break;
+            }
+            case "liveChatViewerEngagementMessageRenderer": {
+                handler.onNotice(channel_id, action.getMessage().toString(), tags);
+                break;
+            }
+            case "markChatItemAsDeletedAction": {
+                tags_map.put("target-msg-id", action.getTargetMessageId());
+                tags_map.put("login", messageIds.get(action.getTargetMessageId()));
+                handler.onClearMsg(tags, channel_id, "haha deleted");
+                break;
+            }
         }
     }
 
-
     @Override
     public void run() {
+        LOGGER.info(lastResponse.getLiveChatContinuation().getViewerName());
+        lastResponse.getLiveChatContinuation().getPanel();
+
+
         while(!stop) {
             for(LiveChatAction action : lastResponse.getLiveChatContinuation().getActions()) {
                 handleAction(action);
@@ -94,7 +104,7 @@ public class YouTubeChannelRunnable implements Runnable {
                 e.printStackTrace();
             }
 
-            lastResponse = new LiveChatMessages().setContinuation(continuation).build().execute();
+            lastResponse = web.getLiveChat(continuation);
             continuation = lastResponse.getLiveChatContinuation().getTimedContinuationData().getContinuation();
         }
     }

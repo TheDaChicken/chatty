@@ -14,6 +14,7 @@ public class LiveChatPage {
 
     public static LiveChatResponse parse(String continuation, String website_page) {
         JSONObject init_data = YouTubeWeb.getInitData(website_page);
+        System.out.print(init_data.toJSONString() + "\n");
         if(init_data == null) {
             return null;
         }

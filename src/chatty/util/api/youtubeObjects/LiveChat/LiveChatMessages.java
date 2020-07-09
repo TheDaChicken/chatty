@@ -1,5 +1,9 @@
 package chatty.util.api.youtubeObjects.LiveChat;
 
+import java.net.HttpCookie;
+import java.util.ArrayList;
+import java.util.List;
+
 public class LiveChatMessages {
 
     public String video_id;

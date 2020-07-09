@@ -2,10 +2,13 @@
 package chatty;
 
 import chatty.util.DateTime;
+import chatty.util.JSONUtil;
 import chatty.util.Replacer;
 import chatty.util.StringUtil;
 import chatty.util.commands.Parameters;
 import chatty.util.settings.FileManager;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 
 import java.awt.Dimension;
 import java.io.UnsupportedEncodingException;
@@ -627,18 +630,16 @@ public class Helper {
      * @return 
      */
     public static Map<String, String> parseBadges(String data) {
-        if (data == null || data.isEmpty()) {
+        JSONArray array = JSONUtil.parseJSONAsList(data);
+        if (data == null || data.isEmpty() || array == null) {
             return EMPTY_BADGES;
         }
         LinkedHashMap<String, String> result = new LinkedHashMap<>();
-        String[] badges = data.split(",");
-        for (String badge : badges) {
-            String[] split = badge.split("/");
-            if (split.length == 2) {
-                String id = split[0];
-                String version = split[1];
-                result.put(id, version);
-            }
+        for(Object obj : array) {
+            String renderer = (String) ((JSONObject)obj).keySet().toArray()[0];
+            JSONObject jsonObject = (JSONObject) ((JSONObject)obj).get(renderer);
+            String tooltip = (String) jsonObject.get("tooltip");
+            result.put(tooltip.toLowerCase(), "");
         }
         return Collections.unmodifiableMap(result);
     }

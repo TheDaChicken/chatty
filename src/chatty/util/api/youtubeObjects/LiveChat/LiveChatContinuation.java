@@ -54,4 +54,19 @@ public class LiveChatContinuation {
         return result;
     }
 
+    public String getViewerName() {
+        return (String) this.jsonObject.get("viewerName");
+    }
+
+    public LiveChatActionPanel getPanel() {
+        JSONObject actionPanel = (JSONObject) this.jsonObject.get("actionPanel");
+        if(actionPanel.keySet().size() == 0) {
+            return null;
+        }
+        String actionName = (String) actionPanel.keySet().toArray()[0];
+        JSONObject jsonObject = (JSONObject) actionPanel.get(actionName);
+
+        return new LiveChatActionPanel(jsonObject);
+    }
+
 }

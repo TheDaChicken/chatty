@@ -1,6 +1,10 @@
 package chatty.util.api;
 
 import chatty.Cookies;
+import chatty.Helper;
+import chatty.exceptions.PrivateStream;
+import chatty.exceptions.RegisterException;
+import chatty.exceptions.YouTube404;
 import chatty.util.JSONUtil;
 import chatty.util.api.youtubeObjects.LiveChat.LiveChatPage;
 import chatty.util.api.youtubeObjects.LiveChat.LiveChatResponse;
@@ -11,7 +15,9 @@ import org.json.simple.JSONObject;
 import java.io.IOException;
 import java.net.HttpCookie;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
@@ -22,10 +28,10 @@ public class YouTubeWeb {
 
     private final static Logger LOGGER = Logger.getLogger(YouTubeWeb.class.getName());
 
-    public static final Pattern YOUTUBE_PLAYER_CONFIG = Pattern.compile(";ytplayer\\.config\\s*=\\s*(\\{.+?\\});");
-    public static final Pattern YOUTUBE_INIT_DATA = Pattern.compile("window\\[\"ytInitialData\"]\\s*=\\s*(\\{.+?\\});");
-    public static final Pattern YOUTUBE_INIT_GUIDED_DATA = Pattern.compile("var ytInitialGuideData\\s*=\\s*(\\{.+?\\});");
-    public static final Pattern CONTINUATION = Pattern.compile("\"continuation\":\"(.+?)\",");
+    private static final Pattern YOUTUBE_PLAYER_CONFIG = Pattern.compile(";ytplayer\\.config\\s*=\\s*(\\{.+?\\});");
+    private static final Pattern YOUTUBE_INIT_DATA = Pattern.compile("window\\[\"ytInitialData\"]\\s*=\\s*(\\{.+?\\});");
+    private static final Pattern YOUTUBE_INIT_GUIDED_DATA = Pattern.compile("var ytInitialGuideData\\s*=\\s*(\\{.+?\\});");
+    private static final Pattern END_POINT_TYPE = Pattern.compile("var data\\s=\\s\\{\\s[^>]*page: \\\\\"(.+?)\\\\\",");
 
     public final YouTubeApiResultListener resultListener;
     public List<HttpCookie> cookies = new ArrayList<>();
@@ -36,18 +42,25 @@ public class YouTubeWeb {
         this.executor = Executors.newCachedThreadPool();
     }
 
-    public YouTubeLiveStream getCurrentLiveStream(String channel_id) throws IOException {
+    public YouTubeLiveStream getCurrentLiveStream(String channel_id) throws YouTube404, RegisterException, PrivateStream {
         RequestResponse response = new RequestBuilder(
                 "https://www.youtube.com/channel/" + channel_id + "/live").setCookies(cookies).build().execute();
-        if(response.status_code != 200) {
-            throw(new IOException("YouTube returned a status code that isn't 200 when getting live stream."));
+        if(response.status_code == 404) {
+            throw(new YouTube404(channel_id));
+        } else if(response.status_code != 200) {
+            throw(new RegisterException("YouTube returned a status code that isn't 200 when getting live stream."));
         }
-        return YouTubeLiveStream.parse(response.getResponse());
+        String website_string = response.getResponse();
+        String endpointType = YouTubeWeb.getEndpointType(website_string);
+        if(endpointType != null && endpointType.equalsIgnoreCase("browse")) {
+            throw(new PrivateStream(channel_id));
+        }
+        return YouTubeLiveStream.parse(website_string);
     }
 
     public LiveChatResponse getLiveChatPage(String continuation) {
         RequestResponse response = new RequestBuilder(
-                "https://www.youtube.com/live_chat?continuation=" + continuation).build().execute();
+                "https://www.youtube.com/live_chat?continuation=" + continuation).setCookies(cookies).build().execute();
         return LiveChatPage.parse(continuation, response.getResponse());
     }
 
@@ -125,15 +138,20 @@ public class YouTubeWeb {
         return null;
     }
 
-    public static String getContinuation(String website_code) {
-        Matcher matcher = YouTubeWeb.CONTINUATION.matcher(website_code);
+    public static String getEndpointType(String website_code) {
+        Matcher matcher = YouTubeWeb.END_POINT_TYPE.matcher(website_code);
         if(matcher.find()) {
-            String matched = matcher.group(1);
-            if(!(matched.length() > 200)) {
-                return matcher.group(1);
-            }
+            return matcher.group(1);
         }
         return null;
+    }
+
+    public LiveChatResponse getLiveChat(String continuation) {
+        RequestResponse response = new RequestBuilder("https://www.youtube.com/live_chat/get_live_chat?commandMetadata=%5Bobject%20Object%5D&continuation=" +
+                continuation + "&hidden=false&pbj=1").setCookies(cookies).build().execute();
+        JSONObject obj = JSONUtil.parseJSON(response.getResponse());
+        JSONObject response_ = (JSONObject) obj.get("response");
+        return new LiveChatResponse(response_);
     }
 
 

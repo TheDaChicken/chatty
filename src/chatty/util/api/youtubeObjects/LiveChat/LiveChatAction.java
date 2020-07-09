@@ -33,13 +33,15 @@ public class LiveChatAction {
         JSONObject authorName = (JSONObject) json.get("authorName");
         String author_name = (String) authorName.get("simpleText");
         String channel_id = (String) json.get("authorExternalChannelId");
-
-        return new Author(author_name, channel_id);
+        JSONArray badges = (JSONArray) json.get("authorBadges");
+        if(badges == null) {
+            badges = new JSONArray();
+        }
+        return new Author(author_name, channel_id, badges);
     }
 
     public String getTargetMessageId() {
         return (String) json.get("targetItemId");
     }
-
 
 }
