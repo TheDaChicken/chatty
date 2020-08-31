@@ -1,5 +1,6 @@
 package chatty;
 
+import chatty.util.JSONUtil;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -24,22 +25,20 @@ public class Cookies {
      */
     public static List<HttpCookie> loadCookies(String cookies_json) {
         JSONParser parser = new JSONParser();
-        Object root = null;
+        JSONArray array;
         try {
-            root = parser.parse(cookies_json);
+            array = (JSONArray)parser.parse(cookies_json);
         } catch (ParseException e) {
+            e.printStackTrace();
             return null;
         }
-        if(!(root instanceof JSONArray)) {
-            return null;
-        }
-        JSONArray array = (JSONArray) root;
         List<HttpCookie> cookies = new ArrayList<>();
         for(Object o : array) {
-            if(!(o instanceof JSONObject)) {
+            JSONObject jsobj = (JSONObject) o;
+            if(jsobj == null) {
+                System.out.print("123213213124142.\n");
                 return null;
             }
-            JSONObject jsobj = (JSONObject) o;
             Cookie cookie = new Cookie();
             for(Map.Entry<String, Object> entry : (Set<Map.Entry<String, Object>>) jsobj.entrySet()) {
                 if(entry.getKey().equalsIgnoreCase("name")) {
@@ -71,12 +70,14 @@ public class Cookies {
             httpcookie.setPath(cookie.path);
             httpcookie.setDomain(cookie.domain);
             httpcookie.setSecure(cookie.secure);
+            httpcookie.setVersion(0);
             if(cookie.expirationDate != 0 ) {
                 httpcookie.setMaxAge(cookie.expirationDate);
             }
             cookies.add(httpcookie);
         }
         if(cookies.size() == 0) {
+            System.out.print("Unable to parse any cookies.\n");
             return null;
         }
         return cookies;

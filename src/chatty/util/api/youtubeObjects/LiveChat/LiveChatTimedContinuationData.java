@@ -10,7 +10,6 @@ public class LiveChatTimedContinuationData {
         this.timedContinuationData = timedContinuationData;
     }
 
-
     public long getPollingIntervalMillis() {
         return (long) timedContinuationData.get("timeoutMs");
     }
@@ -18,7 +17,5 @@ public class LiveChatTimedContinuationData {
     public String getContinuation() {
         return (String) timedContinuationData.get("continuation");
     }
-
-
 
 }

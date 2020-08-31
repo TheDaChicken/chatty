@@ -12,20 +12,20 @@ import java.util.Set;
  * @author tduva
  */
 public class RoomManager {
-    
+
     /**
      * Rooms by channel name of the room.
      */
     private final Map<String, Room> roomsByChannel = new HashMap<>();
-    
+
     private final Map<String, Set<Room>> roomsByOwner = new HashMap<>();
-    
+
     private final RoomUpdatedListener listener;
-    
+
     public RoomManager(RoomUpdatedListener listener) {
         this.listener = listener;
     }
-    
+
     public synchronized void addRooms(Collection<Room> newRooms) {
         if (newRooms != null) {
             for (Room r : newRooms) {
@@ -33,11 +33,11 @@ public class RoomManager {
             }
         }
     }
-    
+
     /**
      * Add only those rooms that don't have a Room object stored here yet.
-     * 
-     * @param newRooms 
+     *
+     * @param newRooms
      */
     public synchronized void addRoomsIfNone(Collection<Room> newRooms) {
         if (newRooms != null) {
@@ -48,7 +48,7 @@ public class RoomManager {
             }
         }
     }
-    
+
     public synchronized void addRoom(Room r) {
         if (r == null) {
             return;
@@ -64,13 +64,13 @@ public class RoomManager {
             roomsByOwner.get(r.getOwnerChannel()).add(r);
         }
     }
-    
+
     /**
      * Return all Room objects that are associated with the given ownerChannel,
      * including the ownerChannel itself, if a Room object for that is stored.
-     * 
+     *
      * @param ownerChannel
-     * @return 
+     * @return
      */
     public synchronized Collection<Room> getRoomsByOwner(String ownerChannel) {
         Collection<Room> result = roomsByOwner.get(ownerChannel);
@@ -79,7 +79,7 @@ public class RoomManager {
         }
         return new HashSet<>();
     }
-    
+
     public synchronized Room getRoom(String channel) {
         if (channel == null) {
             return null;
@@ -90,9 +90,9 @@ public class RoomManager {
         //System.out.println(channel+" "+roomsByChannel.get(channel));
         return roomsByChannel.get(channel);
     }
-    
+
     public static interface RoomUpdatedListener {
         public void roomUpdated(Room room);
     }
-    
+
 }

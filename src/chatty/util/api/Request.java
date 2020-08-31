@@ -1,90 +1,144 @@
 package chatty.util.api;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.*;
-import java.util.HashMap;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 
 public class Request implements Runnable {
-    /*
-        Request something
-     */
 
-    /**
-     * Timeout for connecting in milliseconds.
-     */
-    private static final int CONNECT_TIMEOUT = 30*1000;
-    /**
-     * Timeout for reading from the connection in milliseconds.
-     */
-    private static final int READ_TIMEOUT = 60*1000;
+    private static final Logger LOGGER = Logger.getLogger(Request.class.getName());
 
-    public String REQUEST_METHOD = "GET";
-    public String URL;
-    public HashMap<String, String> HEADERS;
-    public List<HttpCookie> COOKIES;
-    public RequestResult REQUEST_RESULT;
+    private RequestResult origin;
+    private RequestInput input;
 
-    public Request(String REQUEST_METHOD, String URL, HashMap<String, String> HEADERS, List<HttpCookie> COOKIES, RequestResult REQUEST_RESULT) {
-        this.REQUEST_METHOD = REQUEST_METHOD;
-        this.URL = URL;
-        this.HEADERS = HEADERS;
-        this.COOKIES = COOKIES;
-        this.REQUEST_RESULT = REQUEST_RESULT;
+    public Request(RequestInput input) {
+        this.input = input;
     }
 
-    public String getCookieHeaderValue() {
-        StringBuilder string = new StringBuilder("");
-        for (HttpCookie cookie : this.COOKIES) {
-            string.append(cookie.getName() + "=" + cookie.getValue() + ";");
+    public void setOrigin(RequestResult result) {
+        this.origin = result;
+    }
+
+    public RequestResponse sendRequest() {
+        if (input.getAuth() != null) {
+            LOGGER.info(input.getRequestMethod().toString() + ": " + input.getUrl() + " "
+                    + "(using authorization)");
+        } else {
+            LOGGER.info(input.getRequestMethod().toString() + ": " + input.getUrl());
         }
-        return string.toString();
-    }
 
-    public RequestResponse execute() {
         URL url;
         HttpURLConnection connection = null;
 
         try {
-            url = new URL(this.URL);
+            url = new URL(input.getUrl());
             connection = (HttpURLConnection) url.openConnection();
-            connection.setConnectTimeout(CONNECT_TIMEOUT);
-            connection.setReadTimeout(READ_TIMEOUT);
-            connection.setRequestMethod(REQUEST_METHOD);
-            connection.setRequestProperty("cookie", getCookieHeaderValue());
-
+            connection.setConnectTimeout(60000);
+            connection.setUseCaches(true);
+            connection.setRequestMethod(input.getRequestMethod().toString());
             connection.setRequestProperty("Accept-Encoding", "gzip");
 
-            for(Map.Entry<String, String> entrySet : this.HEADERS.entrySet()) {
-                connection.setRequestProperty(entrySet.getKey(), entrySet.getValue());
+            if(input.getCookieManager() != null) {
+                if (input.getCookieManager().getCookieStore().getCookies().size() > 0) {
+                    String cookies = input.getCookieManager().getCookieStore().getCookies().stream()
+                            .map(HttpCookie::toString)
+                            .collect(Collectors.joining("; "));
+                    connection.setRequestProperty("Cookie", cookies);
+                }
+            }
+            if(input.getCookies() != null) {
+                String cookies = input.getCookies().stream()
+                        .map(HttpCookie::toString)
+                        .collect(Collectors.joining("; "));
+                connection.setRequestProperty("Cookie", cookies);
             }
 
-            InputStream stream = connection.getErrorStream();
-            if (stream == null) {
+            if(input.getAuth() != null) {
+                connection.setRequestProperty("Authorization", input.getAuth());
+            }
+
+            for(Map.Entry<String, String> entry : input.getHeaders().entrySet())
+                connection.setRequestProperty(entry.getKey(), entry.getValue());
+
+            if(input.getRequestData() != null) {
+                if(input.getContentType() == null) {
+                    input.setContentType("application/x-www-form-urlencoded");
+                    LOGGER.info("Content Type EMPTY. Setting Content Type to application/x-www-form-urlencoded");
+                }
+                connection.setRequestProperty("Content-Type", input.getContentType());
+                connection.setDoOutput(true);
+
+                try(OutputStream os = connection.getOutputStream()) {
+                    byte[] bytes = input.getRequestData().getBytes(StandardCharsets.UTF_8);
+                    os.write(bytes, 0, bytes.length);
+                }
+                //LOGGER.info("Sending data: "+ input.getRequestData());
+            }
+
+            InputStream stream;
+            if(connection.getResponseCode() < 400) {
                 stream = connection.getInputStream();
+            } else {
+                stream = connection.getErrorStream();
             }
             if ("gzip".equals(connection.getContentEncoding())) {
                 stream = new GZIPInputStream(stream);
             }
-            return new RequestResponse(connection.getResponseCode(), stream);
+
+            StringBuilder response;
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                String line;
+                response = new StringBuilder();
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+            }
+
+            // Handle Cookies
+            if(input.getCookieManager() != null) {
+                List<String> cookiesHeader = connection.getHeaderFields().get("Set-Cookie");
+                if (cookiesHeader != null) {
+                    for (String cookie_header : cookiesHeader) {
+                        HttpCookie cookie = HttpCookie.parse(cookie_header).get(0);
+                        if(cookie.getMaxAge() == 0) { // YouTube removing cookies because cookies are bad.
+                            input.getCookieManager().getCookieStore().remove(null, cookie);
+                        } else {
+                            input.getCookieManager().getCookieStore().add(null, cookie);
+                        }
+                    }
+                }
+            }
+
+
+
+            return new RequestResponse(connection.getResponseCode(), response.toString(), connection.getHeaderFields());
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
-        return null;
+        return new RequestResponse();
     }
 
     @Override
     public void run() {
-        RequestResponse response = execute();
-        if(REQUEST_RESULT != null) {
-            REQUEST_RESULT.requestResult(response);
+        if (origin == null) {
+            return;
         }
+        RequestResponse result = sendRequest();
+        origin.requestResult(result);
     }
 
     public interface RequestResult {
+
         void requestResult(RequestResponse response);
+
     }
 }

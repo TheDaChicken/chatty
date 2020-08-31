@@ -15,10 +15,14 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -590,6 +594,8 @@ public class Helper {
                 banInfo = String.format("(%s)", makeBanInfoDuration(duration));
             } else if (duration == -2) {
                 banInfo = "(deleted)";
+            } else if (duration == -3) {
+                banInfo = "(timeout/banned)";
             } else if (includeBan) {
                 banInfo = "(banned)";
             }
@@ -601,6 +607,19 @@ public class Helper {
 //            }
 //        }
         return banInfo;
+    }
+
+    public static String makeBanCommand(User user, long duration, String id) {
+        if (duration > 0) {
+            return StringUtil.concats("timeout", user.getName(), duration).trim();
+        }
+        if (duration == -3) {
+            return StringUtil.concats("timeout", user.getName(), 300).trim();
+        }
+        if (duration == -2) {
+            return StringUtil.concats("delete", id).trim();
+        }
+        return StringUtil.concats("ban", user.getName()).trim();
     }
     
     public static Dimension getDimensionFromParameter(String parameter) {
@@ -622,24 +641,54 @@ public class Helper {
     }
     
     private static final Map<String, String> EMPTY_BADGES = Collections.unmodifiableMap(new LinkedHashMap<String, String>());
-    
+
+
     /**
      * Parses the badges tag. The resulting map is unmodifiable.
-     * 
+     *
      * @param data
-     * @return 
+     * @return
      */
     public static Map<String, String> parseBadges(String data) {
-        JSONArray array = JSONUtil.parseJSONAsList(data);
-        if (data == null || data.isEmpty() || array == null) {
+        if (data == null || data.isEmpty()) {
             return EMPTY_BADGES;
         }
         LinkedHashMap<String, String> result = new LinkedHashMap<>();
-        for(Object obj : array) {
-            String renderer = (String) ((JSONObject)obj).keySet().toArray()[0];
-            JSONObject jsonObject = (JSONObject) ((JSONObject)obj).get(renderer);
-            String tooltip = (String) jsonObject.get("tooltip");
-            result.put(tooltip.toLowerCase(), "");
+        String[] badges = data.split(",");
+        for (String badge : badges) {
+            String[] split = badge.split("/");
+            if (split.length == 2) {
+                String id = split[0];
+                String version = split[1];
+                result.put(id, version);
+            }
+        }
+        return Collections.unmodifiableMap(result);
+    }
+
+    public static Map<String, String> parseBadgesJson(String data) {
+        if (data == null || data.isEmpty()) {
+            return EMPTY_BADGES;
+        }
+        LinkedHashMap<String, String> result = new LinkedHashMap<>();
+        JSONArray array = (JSONArray) JSONUtil.parseJSON(data);
+        for(Object non_obj : array) {
+            JSONObject obj = (JSONObject) non_obj;
+            if(obj != null) {
+                Iterator it = obj.entrySet().iterator();
+                if(it.hasNext()) { // Skip stupid name;
+                    Map.Entry<String,Object> entry = (Map.Entry<String,Object>) it.next();
+                    JSONObject badgeInfo = (JSONObject) entry.getValue();
+                    String tooltip = (String) badgeInfo.get("tooltip");
+                    if(tooltip.toLowerCase().equalsIgnoreCase("verified")) {
+                        result.put("partner", "a");
+                    } else if(tooltip.toLowerCase().equalsIgnoreCase("moderator")) {
+                        result.put("moderator", "a");
+                    } else if(tooltip.toLowerCase().equalsIgnoreCase("owner")) {
+                        result.put("broadcaster", "a");
+                    }
+                }
+            }
         }
         return Collections.unmodifiableMap(result);
     }
@@ -763,6 +812,74 @@ public class Helper {
             }
         }
         return b.toString();
+    }
+
+    private static final Pattern YOUTUBE_INIT_DATA = Pattern.compile("window\\[\"ytInitialData\"]\\s*=\\s*(\\{.+?\\});");
+
+    public static JSONObject parse_yt_init_data(String website_code) {
+        Matcher matcher = YOUTUBE_INIT_DATA.matcher(website_code);
+        if(matcher.find()) {
+            return (JSONObject) JSONUtil.parseJSON(matcher.group(1));
+        }
+        return null;
+    }
+
+    private static final Pattern YOUTUBE_PLAYER_CONFIG = Pattern.compile(";ytplayer\\.config\\s*=\\s*(\\{.+?});ytplayer");
+    private static final Pattern YOUTUBE_PLAYER_CONFIG2 = Pattern.compile(";ytplayer\\.config\\s*=\\s*(\\{.+?});");
+
+    public static JSONObject parse_yt_player_config(String website_code) {
+        Matcher matcher = YOUTUBE_PLAYER_CONFIG.matcher(website_code);
+        if(matcher.find()) {
+            return (JSONObject) JSONUtil.parseJSON(matcher.group(1));
+        } else {
+            matcher = YOUTUBE_PLAYER_CONFIG2.matcher(website_code);
+            if(matcher.find()) {
+                return (JSONObject) JSONUtil.parseJSON(matcher.group(1));
+            }
+        }
+        return null;
+    }
+
+    public static String create_authorization_hash(String SAPISID, String origin) {
+        long linux_epoch = new Date().getTime();
+        String unhash = linux_epoch / 1000 + " " + SAPISID + " " + origin;
+        try
+        {
+            MessageDigest crypt = MessageDigest.getInstance("SHA-1");
+            crypt.reset();
+            crypt.update(unhash.getBytes(StandardCharsets.UTF_8));
+            Formatter formatter = new Formatter();
+            for (byte b : crypt.digest())
+            {
+                formatter.format("%02x", b);
+            }
+            String hash = formatter.toString();
+            formatter.close();
+            return linux_epoch / 1000 + "_" + hash;
+        }
+        catch(NoSuchAlgorithmException e)
+        {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private static final String CPN_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+    public static String generate_random(int count) {
+        StringBuilder builder = new StringBuilder();
+        while (count-- != 0) {
+            int character = (int)(Math.random()*CPN_ALPHABET.length());
+            builder.append(CPN_ALPHABET.charAt(character));
+        }
+        return builder.toString();
+    }
+
+    public static String extract_image_id(String url) {
+        int domain = url.lastIndexOf("/");
+        String last_url = url.substring(domain + 1);
+        int last = last_url.lastIndexOf("=");
+        return last_url.substring(0, last);
     }
 
 }

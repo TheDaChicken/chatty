@@ -1,37 +1,59 @@
 package chatty.util.api;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import chatty.Helper;
+import chatty.util.JSONUtil;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
+import java.util.List;
+import java.util.Map;
 
 public class RequestResponse {
+    private final int status_code;
+    private final Map<String, List<String>> headers;
+    private final String response;
+    private final boolean failed;
 
-    public final int status_code;
-    private final InputStream inputStream;
-
-    public RequestResponse(int status_code, InputStream response) {
+    public RequestResponse(int status_code, String response, Map<String, List<String>> headerFields) {
+        this.response = response;
         this.status_code = status_code;
-        this.inputStream = response;
+        this.headers = headerFields;
+        this.failed = false;
     }
 
-    public String getResponse() {
-        Charset charset = StandardCharsets.UTF_8;
-        // Read response
-        StringBuilder response = null;
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(this.inputStream, charset))) {
-            String line;
-            response = new StringBuilder();
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+    public RequestResponse() {
+        this.response = null;
+        this.status_code = 0;
+        this.headers = null;
+        this.failed = true;
+    }
+
+    public int getStatusCode() {
+        return this.status_code;
+    }
+
+    public Map<String, List<String>> getHeaders() {
+        return this.headers;
+    }
+
+    public String getContentType() {
+        return this.headers.get("Content-Type").get(0);
+    }
+
+    public String getString() {
+        return this.response;
+    }
+
+    public JSONObject toJson() {
+        if(!getContentType().contains("application/json")) {
             return null;
         }
-        return response.toString();
+        return (JSONObject) JSONUtil.parseJSON(this.response);
+    }
+
+    public boolean isFailed() {
+        return this.failed;
     }
 
 }

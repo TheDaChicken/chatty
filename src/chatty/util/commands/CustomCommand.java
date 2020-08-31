@@ -11,7 +11,7 @@ import java.util.Set;
  *
  * @author tduva
  */
-public class CustomCommand {
+public class CustomCommand extends Command {
     
     private final String name;
     private final String chan;

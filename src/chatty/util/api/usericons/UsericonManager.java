@@ -258,7 +258,7 @@ public class UsericonManager {
      * @return The {@code ImageIcon} or {@code null} if none was found
      */
     private Usericon getDefaultIcon(Type type, String id, String version, User user, int source) {
-        for (Usericon icon : defaultIcons) {
+        for (Usericon icon : defaultIcons) { ;
             Usericon checked = checkIcon(icon, type, id, version, user, source);
             if (checked != null) {
                 return checked;

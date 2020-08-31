@@ -3,12 +3,15 @@ package chatty.gui.components;
 
 import chatty.gui.MainGui;
 import chatty.lang.Language;
+import org.slf4j.spi.LocationAwareLogger;
 
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionListener;
+import java.net.HttpCookie;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -132,15 +135,22 @@ public class TokenDialog extends JDialog {
         pack();
     }
     
-    public void update(String username, String cookies) {
+    public void update(String username, String cookies_json) {
         this.currentUsername = username;
-        this.currentCookies = cookies;
-        if (currentUsername.isEmpty() || cookies.isEmpty()) {
+        this.currentCookies = cookies_json;
+        if (currentUsername.isEmpty() || cookies_json.isEmpty()) {
             name.setText(Language.getString("login.createLogin"));
         }
         else {
             name.setText(currentUsername);
         }
+        //setTokenInfo("");
+        update();
+    }
+
+    public void update(String username) {
+        this.currentUsername = username;
+        name.setText(currentUsername);
         //setTokenInfo("");
         update();
     }

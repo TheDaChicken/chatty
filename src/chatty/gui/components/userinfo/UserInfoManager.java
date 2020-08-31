@@ -72,6 +72,7 @@ public class UserInfoManager {
             public void anonCustomCommand(Room room, CustomCommand command, Parameters parameters) {
                 main.anonCustomCommand(room, command, parameters);
             }
+
         };
         userInfoRequester = new UserInfoRequester() {
 

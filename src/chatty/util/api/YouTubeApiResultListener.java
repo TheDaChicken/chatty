@@ -3,6 +3,7 @@ package chatty.util.api;
 
 import chatty.util.api.usericons.Usericon;
 
+import java.net.HttpCookie;
 import java.util.List;
 
 /**
@@ -13,8 +14,7 @@ import java.util.List;
 public interface YouTubeApiResultListener {
     //void receivedEmoticons(EmoticonUpdate emoteUpdate);
     //void receivedCheerEmoticons(Set<CheerEmoticon> emoticons);
-    void receivedUsericons(List<Usericon> icons);
-    void cookiesVerified(String cookies, TokenInfo tokenInfo);
+    void cookiesVerified(String json_cookies, TokenInfo tokenInfo);
     void tokenRevoked(String error);
     //void runCommercialResult(String stream, String text, RequestResultCode result);
     //void putChannelInfoResult(RequestResultCode result);

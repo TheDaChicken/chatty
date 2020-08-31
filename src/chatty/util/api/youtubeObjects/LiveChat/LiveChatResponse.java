@@ -10,6 +10,10 @@ public class LiveChatResponse {
         this.response = jsonObject;
     }
 
+    public boolean isLiveChatClosed() {
+        return response.get("continuationContents") == null;
+    }
+
     public LiveChatContinuation getLiveChatContinuation() {
         JSONObject continuationContents = (JSONObject) response.get("continuationContents");
         JSONObject liveChatContinuation = (JSONObject) continuationContents.get("liveChatContinuation");

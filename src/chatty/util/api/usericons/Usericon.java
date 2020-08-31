@@ -55,7 +55,7 @@ public class Usericon implements Comparable {
         BROADCASTER(2, "Broadcaster", "BRC", "~", "broadcaster", HtmlColors.decode("#e71818")),
         STAFF(3, "Staff", "STA", "&", "staff", HtmlColors.decode("#200f33")),
         ADMIN(4, "Admin", "ADM", "!", "admin", HtmlColors.decode("#faaf19")),
-        SUB(5, "Subscriber", "SUB", "%", "subscriber", null),
+        SUB(5, "Member", "SUB", "%", "member", null),
         ADDON(6, "Addon", "ADD", "'", null, null),
         GLOBAL_MOD(7, "Global Moderator", "GLM", "*", "global_mod", HtmlColors.decode("#0c6f20")),
         BOT(8, "Bot", "BOT", "^", null, null),

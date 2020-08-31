@@ -115,6 +115,7 @@ public class Emoticon {
     public final String stringIdAlias;
     public final String urlX2;
     public final String creator;
+    public final String name;
     
     private String stream;
     private Set<String> infos;
@@ -152,6 +153,7 @@ public class Emoticon {
         private String emoteset = SET_NONE;
         private String stringId = null;
         private String stringIdAlias = null;
+        private String name = null;
         private String creator;
         private boolean isAnimated = false;
         
@@ -174,6 +176,11 @@ public class Emoticon {
                 }
                 streamRestrictions.add(StringUtil.toLowerCase(stream));
             }
+            return this;
+        }
+
+        public Builder setName(String name) {
+            this.name = name;
             return this;
         }
         
@@ -252,7 +259,7 @@ public class Emoticon {
     public String getEmoteUrl(int factor) {
         if (type == Type.TWITCH) {
             if (stringId != null) {
-                return getTwitchEmoteUrlById(stringId, factor);
+                return getTwitchEmoteUrlById(stringIdAlias, factor);
             }
         } else if (type == Type.BTTV && stringId != null) {
             return getBttvEmoteUrl(stringId, factor);
@@ -265,7 +272,9 @@ public class Emoticon {
     }
     
     public static String getTwitchEmoteUrlById(String id, int factor) {
-        return "https://static-cdn.jtvnw.net/emoticons/v1/"+id+"/"+factor+".0";
+        int size = factor * 25;
+
+        return "https://yt3.ggpht.com/"+id+"="+"w" + size +"-h" + size + "-c-k-nd\n";
     }
     
     public String getBttvEmoteUrl(String id, int factor) {
@@ -341,6 +350,7 @@ public class Emoticon {
         this.infos = builder.infos;
         this.isAnimated = builder.isAnimated;
         this.subType = builder.subtype;
+        this.name = builder.name;
     }
     
     private void createMatcher() {

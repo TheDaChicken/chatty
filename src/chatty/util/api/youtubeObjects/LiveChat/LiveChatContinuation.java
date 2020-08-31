@@ -1,12 +1,14 @@
 package chatty.util.api.youtubeObjects.LiveChat;
 
+import chatty.Helper;
+import chatty.util.api.Emoticon;
+import chatty.util.api.youtubeObjects.LiveChat.actions.BaseAction;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.slf4j.spi.LocationAwareLogger;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+
+import java.util.*;
 
 public class LiveChatContinuation {
 
@@ -25,29 +27,44 @@ public class LiveChatContinuation {
         return null;
     }
 
-    public JSONArray getEmotes() {
-        JSONArray emotes = (JSONArray) this.jsonObject.get("emojis");
-        return emotes;
+    public Set<Emoticon> getEmotes() {
+        Set<Emoticon> emotions = new HashSet<>();
+        for(Object obj : (JSONArray) jsonObject.get("emojis")) {
+            if(obj instanceof JSONObject) {
+                JSONObject emote = (JSONObject) obj;
+                String shortcut = (String) ((JSONArray)emote.get("shortcuts")).get(0);
+                String searchTerm = (String) ((JSONArray)emote.get("searchTerms")).get(0);
+                String id = (String) emote.get("emojiId");
+
+                JSONObject image = (JSONObject) emote.get("image");
+                JSONArray thumbnails = (JSONArray) image.get("thumbnails");
+                JSONObject thumbnail = (JSONObject) thumbnails.get(0);
+                String imageId = Helper.extract_image_id((String) thumbnail.get("url"));
+
+                Emoticon.Builder builder = new Emoticon.Builder(Emoticon.Type.TWITCH,
+                        shortcut, (String) thumbnail.get("url"));
+
+                builder.setCreator("YouTube Gaming.");
+                builder.setStringId(id);
+                builder.setName(searchTerm);
+                builder.setStringIdAlias(imageId); // Image ID is just another id ¯\_(ツ)_/¯
+                emotions.add(builder.build());
+            }
+        }
+        return emotions;
     }
 
-    public List<LiveChatAction> getActions() {
+    public List<BaseAction> getActions() {
         JSONArray actions = (JSONArray) this.jsonObject.get("actions");
-        List<LiveChatAction> result = new ArrayList<>();
+        List<BaseAction> result = new ArrayList<>();
         if(actions != null) {
             for (Object o : actions) {
                 JSONObject obj = (JSONObject) o;
-                for(Map.Entry<String, JSONObject> entrySet : (Set<Map.Entry<String, JSONObject>>) obj.entrySet()) {
-                    JSONObject addChatItemAction = entrySet.getValue();
-                    JSONObject item = (JSONObject) addChatItemAction.get("item");
-                    if(item == null) {
-                        LiveChatAction action = new LiveChatAction(entrySet.getKey(), entrySet.getValue());
-                        result.add(action);
-                    } else {
-                        for (Map.Entry<String, JSONObject> subEntrySet : (Set<Map.Entry<String, JSONObject>>) item.entrySet()) {
-                            LiveChatAction action = new LiveChatAction(subEntrySet.getKey(), subEntrySet.getValue());
-                            result.add(action);
-                        }
-                    }
+                Iterator it = obj.entrySet().iterator();
+                if(it.hasNext()) {
+                    Map.Entry<String,Object> entry = (Map.Entry<String,Object>) it.next();
+                    BaseAction action = BaseAction.parseAction(entry.getKey(), (JSONObject) entry.getValue());
+                    result.add(action);
                 }
             }
         }
@@ -56,17 +73,6 @@ public class LiveChatContinuation {
 
     public String getViewerName() {
         return (String) this.jsonObject.get("viewerName");
-    }
-
-    public LiveChatActionPanel getPanel() {
-        JSONObject actionPanel = (JSONObject) this.jsonObject.get("actionPanel");
-        if(actionPanel.keySet().size() == 0) {
-            return null;
-        }
-        String actionName = (String) actionPanel.keySet().toArray()[0];
-        JSONObject jsonObject = (JSONObject) actionPanel.get(actionName);
-
-        return new LiveChatActionPanel(jsonObject);
     }
 
 }

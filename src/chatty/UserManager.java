@@ -157,6 +157,16 @@ public class UserManager {
         return getUsersByChannel(channel).get(channel_id);
     }
 
+    public synchronized User getUserFromUsername(Room room, String name) {
+        for (Entry<String, User> entry : getUsersByChannel(room.getChannel()).entrySet()) {
+            if (entry.getValue() != null) {
+                if(entry.getValue().getName().equalsIgnoreCase(name)) {
+                    return entry.getValue();
+                }
+            }
+        }
+        return null;
+    }
 
     /**
      * Returns the User with the given name or creates a new User object if none

@@ -53,9 +53,8 @@ public class Room {
 
     private Room(String channel, String id, String name, String ownerId,
             String ownerChannel, String customName, String topic) {
-        //System.out.println(channel);
-        this.isOwner = !channel.startsWith("#chatrooms:");
-        this.isChatroom = channel.startsWith("#chatrooms:");
+        this.isOwner = false;
+        this.isChatroom = false;
         this.channel = channel;
         this.topic = topic;
         this.name = name;
@@ -73,14 +72,10 @@ public class Room {
         
         // Only set stream if normal channel, and depending on whether it's
         // a chatroom that belongs to another channel
-        if (channel.startsWith("#")) {
-            if (isOwner) {
-                stream = Helper.toStream(channel);
-            } else {
-                stream = Helper.toStream(ownerChannel);
-            }
+        if (isOwner) {
+            stream = channel;
         } else {
-            stream = null;
+            stream = ownerChannel;
         }
         
         // Set displayName based on what info is available, fileName is

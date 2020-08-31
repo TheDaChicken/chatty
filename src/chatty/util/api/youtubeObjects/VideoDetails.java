@@ -1,14 +1,23 @@
 package chatty.util.api.youtubeObjects;
 
+import org.json.simple.JSONObject;
+
 public class VideoDetails {
 
-    public final String video_id;
-    public final String title;
-    public final String channel_id;
+    private final String video_id;
+    private final String channel_id;
 
-    public VideoDetails(String video_id, String title, String channel_id) {
-        this.video_id = video_id;
-        this.title = title;
-        this.channel_id = channel_id;
+    public VideoDetails(JSONObject videoDetails) {
+        this.video_id = (String) videoDetails.get("videoId");
+        this.channel_id = (String) videoDetails.get("channelId");
     }
+
+    public String getVideoId() {
+        return this.video_id;
+    }
+
+    public String getChannelId() {
+        return this.channel_id;
+    }
+
 }

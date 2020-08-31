@@ -69,6 +69,8 @@ public class PastMessages extends JTextArea {
                 b.append(DateTime.format(m.getTime(), timestampFormat)).append(">");
                 if (bm.duration > 0) {
                     b.append("Timed out (").append(bm.duration).append("s)");
+                } else if(bm.duration == -3) {
+                    b.append("Banned/Timeout [NO INFO]");
                 }
                 else {
                     b.append("Banned permanently");

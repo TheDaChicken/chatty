@@ -1,14 +1,25 @@
 package chatty;
 
 import static chatty.Logging.USERINFO;
+
+import chatty.exceptions.InternetOffline;
+import chatty.exceptions.UnableJoin;
+import chatty.exceptions.YouTube404;
 import chatty.lang.Language;
 import chatty.util.DateTime;
 import chatty.util.DelayedActionQueue;
+import chatty.util.api.Emoticon;
 import chatty.util.api.YouTubeWeb;
+import chatty.util.api.usericons.Usericon;
+import chatty.util.api.youtubeObjects.LiveChat.actions.Items.liveChatTextMessageRenderer;
+import chatty.util.api.youtubeObjects.ModerationData;
 import chatty.util.irc.MsgParameters;
 import chatty.util.irc.MsgTags;
+import org.json.simple.JSONArray;
 
 import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
 import java.util.logging.Logger;
 
 public abstract class YouTubeLiveChats {
@@ -23,7 +34,7 @@ public abstract class YouTubeLiveChats {
     private final DelayedActionQueue<String> joinQueue
             = DelayedActionQueue.create(new DelayedJoinAction(), JOIN_DELAY);
 
-    private final HashMap<String, YouTubeChannelRunnable> channels = new HashMap<>();
+    private final HashMap<String, YouTubeLiveChatRunnable> channels = new HashMap<>();
 
     private long connectedSince = -1;
 
@@ -44,10 +55,13 @@ public abstract class YouTubeLiveChats {
 
     private final YouTubeWeb web;
 
-    public YouTubeLiveChats(String id, YouTubeWeb web) {
+    private final String user_channel_id;
+
+    public YouTubeLiveChats(String id, YouTubeWeb web, String user_channel_id) {
         this.id = id;
         this.idPrefix = "["+id+"] ";
         this.web = web;
+        this.user_channel_id = user_channel_id;
     }
 
     private void info(String message) {
@@ -134,27 +148,23 @@ public abstract class YouTubeLiveChats {
     /**
      * Join a channel.
      *
-     * @param channel_identifier
+     * @param channel_identifier The Channel Identifier
      */
     public void joinChannelImmediately(String channel_identifier) {
         if (state >= STATE_ENABLED) {
-            YouTubeChannelRunnable channelRunnable = new YouTubeChannelRunnable(web, this);
+            YouTubeLiveChatRunnable channelRunnable = new YouTubeLiveChatRunnable(web, this, id);
             onJoinAttempt(channel_identifier);
-            int result = channelRunnable.loadInformation(channel_identifier);
-            if(result == 0) {
-                new Thread(channelRunnable).start();
-                onJoin(channel_identifier, channel_identifier, "[ME]");
-            } else {
-                /*
-                    TODO Make Language String for QUOTA
-                 */
-                if(result == YouTubeChannelRunnable.FAILED) {
-                    LOGGER.warning("Join may have failed ("+channel_identifier+")");
-                    LOGGER.log(USERINFO, Language.getString("chat.error.joinFailed", channel_identifier));
-                } else if(result == YouTubeChannelRunnable.QUOTA) {
-                    LOGGER.warning("Join failed ("+channel_identifier+")");
-                    LOGGER.log(USERINFO, "Join failed: " + channel_identifier + " due to quota limits.", channel_identifier);
+            try {
+                channelRunnable.loadInformation(channel_identifier);
+                if(channelRunnable.viewer_name != null) {
+                    onJoin(channel_identifier, user_channel_id, channelRunnable.viewer_name);
+                } else {
+                    onJoin(channel_identifier, user_channel_id, "[NOT LOGGED IN]");
                 }
+                new Thread(channelRunnable).start();
+            } catch (YouTube404 | UnableJoin | InternetOffline ignored) {
+                LOGGER.warning("Join may have failed ("+channel_identifier+")");
+                LOGGER.log(USERINFO, Language.getString("chat.error.joinFailed", channel_identifier));
             }
             channels.put(channel_identifier, channelRunnable);
         }
@@ -167,8 +177,41 @@ public abstract class YouTubeLiveChats {
      * @param message
      * @param tags
      */
-    public void sendMessage(String to, String message, MsgTags tags) {
+    public void sendMessage(String channel, String message, MsgTags tags) {
+        if(channels.get(channel) != null) {
+            YouTubeLiveChatRunnable runnable = channels.get(channel);
+            runnable.send_message(message);
+        }
+    }
 
+    public void sendMessage(String channel, JSONArray segments, MsgTags tags) {
+        if(channels.get(channel) != null) {
+            YouTubeLiveChatRunnable runnable = channels.get(channel);
+            runnable.send_message(segments);
+        }
+    }
+    public boolean timeout(String channel, String msgId, String name, String time, String reason) {
+        if(channels.get(channel) != null) {
+            YouTubeLiveChatRunnable runnable = channels.get(channel);
+            return runnable.timeout(name, time);
+        }
+        return false;
+    }
+
+    public boolean ban(String channel, String channel_id) {
+        if(channels.get(channel) != null) {
+            YouTubeLiveChatRunnable runnable = channels.get(channel);
+            return runnable.ban(channel_id);
+        }
+        return false;
+    }
+
+    public boolean unban(String channel, String channel_id) {
+        if(channels.get(channel) != null) {
+            YouTubeLiveChatRunnable runnable = channels.get(channel);
+            return runnable.unban(channel_id);
+        }
+        return false;
     }
 
     /**
@@ -221,9 +264,9 @@ public abstract class YouTubeLiveChats {
      * Methods that can by overwritten by another Class
      */
 
-    void onChannelMessage(String channel, String channel_id, String nick, String text, MsgTags tags, boolean action) {}
+    void onChannelMessage(String channel, String client_id, liveChatTextMessageRenderer messageRenderer) {}
 
-    void onQueryMessage (String nick, String from, String text) {}
+    void onQueryMessage(String nick, String from, String text) {}
 
     void onNotice(String nick, String from, String text) {}
 
@@ -231,7 +274,7 @@ public abstract class YouTubeLiveChats {
 
     void onJoinAttempt(String channel) {}
 
-    void onJoin(String channel, String channel_id_, String username) {}
+    void onJoin(String channel, String user_channel_id, String username) {}
 
     void onPart(String channel, String nick) { }
 
@@ -261,12 +304,24 @@ public abstract class YouTubeLiveChats {
 
     void onClearChat(MsgTags tags, String channel, String name) { }
 
-    void onClearMsg(MsgTags tags, String channel, String msg) { }
+    void onClearMsg(MsgTags tags, String channel, ModerationData data) { }
 
     void onChannelCommand(MsgTags tags, String nick, String channel, String command, String trailing) { }
 
     void onCommand(String nick, String command, String parameter, String text, MsgTags tags) { }
 
     void onUsernotice(String channel, String message, MsgTags tags) { }
+
+    void addUsericons(List<Usericon> icons) { }
+
+    void receivedModerationData(ModerationData data) { }
+
+    void receivedUsername(String username) {}
+
+    void receivedEmoticons(Set<Emoticon> emoticons) {  }
+
+
+    //User getUserFromMessage(String channel, String targetMsgId) { return null; }
+    // I hate this so much but there is legit no way from YouTube getting username. This is why it's so bad.
 
 }

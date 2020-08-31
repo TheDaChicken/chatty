@@ -7,6 +7,7 @@ import chatty.gui.components.menus.CommandMenuItems;
 import chatty.gui.components.settings.CommandSettings;
 import chatty.util.commands.CustomCommand;
 import chatty.util.commands.Parameters;
+
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -26,7 +27,7 @@ import javax.swing.KeyStroke;
  * @author tduva
  */
 public class Buttons {
-    
+
     private final UserInfo owner;
     private final ActionListener listener;
     
@@ -116,7 +117,7 @@ public class Buttons {
             button.addActionListener(listener);
             button.setToolTipText("<html><body><p style='font-family:monospaced;'>"
                     + CommandSettings.formatCommandInfo(item.getCommand().toString()));
-            commands.put(button, item.getCommand());
+            commands.put(button, (CustomCommand) item.getCommand());
             
             boolean secondaryButton = false;
             if (item.getParent() != null && !item.getParent().startsWith("a")) {
@@ -126,8 +127,8 @@ public class Buttons {
             
             getRow(item.getParent()).add(button);
 
-            if (item.getCommand() != null && item.getCommand().getCommandName() != null) {
-                String commandName = item.getCommand().getCommandName();
+            if (item.getCommand() != null && ((CustomCommand)item.getCommand()).getCommandName() != null) {
+                String commandName = ((CustomCommand)item.getCommand()).getCommandName();
                 if (commandName.equalsIgnoreCase("modunmod")) {
                     button.setVisible(false);
                     modUnmodButton = button;

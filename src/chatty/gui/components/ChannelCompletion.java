@@ -203,6 +203,7 @@ public class ChannelCompletion implements AutoCompletionServer {
                         items = getCompletionItemsEmoji(search);
                         items.append(getCompletionItemsEmotes(search, ":"));
                         sortMixed(items, search);
+                        System.out.print("items: " + items.items.toString() + "\n");
                         return items;
                     case 1:
                         items = getCompletionItemsEmoji(search);
@@ -228,10 +229,10 @@ public class ChannelCompletion implements AutoCompletionServer {
             return getCompletionItemsEmotes(search, "");
         }
         if (setting.equals("custom")) {
-            return CompletionItems.createFromStrings(getCustomCompletionItems(searchCase), "");
+            return AutoCompletionServer.CompletionItems.createFromStrings(getCustomCompletionItems(searchCase), "");
         }
-        CompletionItems names = getCompletionItemsNames(search, preferUsernames);
-        CompletionItems emotes = getCompletionItemsEmotes(search, "");
+        AutoCompletionServer.CompletionItems names = getCompletionItemsNames(search, preferUsernames);
+        AutoCompletionServer.CompletionItems emotes = getCompletionItemsEmotes(search, "");
         if (setting.equals("both")) {
             names.append(emotes);
             return names;
@@ -245,7 +246,7 @@ public class ChannelCompletion implements AutoCompletionServer {
         Collection<Emoticon> allEmotes = new LinkedList<>(main.getUsableGlobalEmotes());
         allEmotes.addAll(main.getUsableEmotesPerStream(channel.getStreamName()));
         List<Emoticon> result = filterCompletionItems(allEmotes, search, SORT_EMOTES_BY_NAME, item -> {
-            return item.code;
+            return item.name;
         });
         List<CompletionItem> items = new ArrayList<>();
         for (Emoticon emote : result) {
@@ -275,7 +276,7 @@ public class ChannelCompletion implements AutoCompletionServer {
 
         @Override
         public int compare(Emoticon o1, Emoticon o2) {
-            return o1.code.compareToIgnoreCase(o2.code);
+            return o1.name.compareToIgnoreCase(o2.name);
         }
     };
 

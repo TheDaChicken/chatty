@@ -7,6 +7,9 @@ import chatty.gui.emoji.EmojiUtil;
 import chatty.util.CombinedEmoticon;
 import chatty.util.StringUtil;
 import chatty.util.settings.Settings;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.io.BufferedReader;
@@ -303,7 +306,9 @@ public class Emoticons {
                 +getGlobalTwitchEmotes().size()+" global emotes).");
         findFavorites();
     }
-    
+
+    //private volatile Map<Pattern, String> emoteReplacement = new HashMap<>();
+
     /**
      * Helper method to add an emote to a Collection.
      * 
@@ -327,6 +332,7 @@ public class Emoticons {
                 }
             }
         }
+        //emoteReplacement.put(Pattern.compile(emote.code, Pattern.LITERAL), emote.stringId);
         
         /**
          * Add to collection.
@@ -1057,6 +1063,43 @@ public class Emoticons {
             }
         }
         return input;
+    }
+
+    public JSONArray createJsonText(String input) {
+        /*
+            Creates a Json + emote id.
+         */
+        JSONArray array = new JSONArray();
+        for (Emoticon emoticon : getGlobalTwitchEmotes()) {
+            Matcher m = emoticon.getMatcher(input);
+
+            int length_change = 0;
+            while (m.find()) {
+                int start = m.start() - length_change;
+                int end = m.end() - length_change;
+                String id = emoticon.stringId;
+
+                // Before everything before start
+                JSONObject text = new JSONObject();
+                String before = input.substring(0, start);
+                if(!before.isEmpty()) {
+                    text.put("text", before);
+                    array.add(text);
+                }
+                JSONObject emote = new JSONObject();
+                emote.put("emojiId", id);
+                array.add(emote);
+
+                input = input.substring(end);
+                length_change += end;
+            }
+        }
+        if(!input.isEmpty()) {
+            JSONObject text = new JSONObject();
+            text.put("text", input);
+            array.add(text);
+        }
+        return array;
     }
 
 }

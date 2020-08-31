@@ -5,23 +5,26 @@ import chatty.gui.LaF;
 import chatty.gui.MainGui;
 import chatty.gui.colors.UsercolorManager;
 import chatty.gui.components.menus.UserContextMenu;
+import chatty.gui.components.textpane.ModLogInfo;
 import chatty.lang.Language;
 import chatty.splash.Splash;
-import chatty.util.DateTime;
-import chatty.util.Debugging;
-import chatty.util.UserRoom;
-import chatty.util.api.TokenInfo;
-import chatty.util.api.YouTubeApiResultListener;
-import chatty.util.api.YouTubeWeb;
+import chatty.util.*;
+import chatty.util.api.*;
 import chatty.util.api.usericons.Usericon;
 import chatty.util.api.usericons.UsericonManager;
+import chatty.util.api.youtubeObjects.LiveChat.actions.Items.liveChatTextMessageRenderer;
+import chatty.util.api.youtubeObjects.ModerationData;
 import chatty.util.chatlog.ChatLog;
+import chatty.util.commands.CustomCommand;
 import chatty.util.commands.CustomCommands;
 import chatty.util.commands.Parameters;
 import chatty.util.irc.MsgTags;
 import chatty.util.settings.FileManager;
 import chatty.util.settings.Settings;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -44,6 +47,8 @@ public class YouTubeClient {
      */
     public final YouTubeWeb web;
 
+    public final EmotesetManager emotesetManager;
+
     private final YouTubeConnection c;
 
     public final ChannelFavorites channelFavorites;
@@ -60,7 +65,7 @@ public class YouTubeClient {
 
     private final SettingsManager settingsManager;
     public final CustomCommands customCommands;
-    //public final Commands commands = new Commands();
+    public final Commands commands = new Commands();
 
     public final UsercolorManager usercolorManager;
     public final UsericonManager usericonManager;
@@ -115,6 +120,11 @@ public class YouTubeClient {
         usercolorManager = new UsercolorManager(settings);
         usericonManager = new UsericonManager(settings);
 
+        ImageCache.setDefaultPath(Paths.get(Chatty.getCacheDirectory()+"img"));
+        ImageCache.setCachingEnabled(settings.getBoolean("imageCache"));
+        ImageCache.deleteExpiredFiles();
+        EmoticonSizeCache.loadFromFile();
+
         customNames = new CustomNames(settings);
 
         chatLog = new ChatLog(settings);
@@ -139,7 +149,7 @@ public class YouTubeClient {
         LOGGER.info("Create GUI..");
         g = new MainGui(this);
         g.loadSettings();
-        //emotesetManager = new EmotesetManager(api, g, settings);
+        emotesetManager = new EmotesetManager(web, g, settings);
         g.showGui();
     }
 
@@ -246,6 +256,7 @@ public class YouTubeClient {
     public String getChannelID() {
         return c.getChannelID();
     }
+
 
     public User getUser(String channel, String channel_id, String name) {
         return c.getUser(channel, channel_id, name);
@@ -369,7 +380,7 @@ public class YouTubeClient {
         }
         //api.requestUserId(Helper.toStream(autojoin));
 //        api.getEmotesByStreams(Helper.toStream(autojoin)); // Removed
-        c.autoJoinChannels(channel_id, autojoin);
+        c.autoJoinChannels(channel_id, name, autojoin);
         return true;
     }
 
@@ -416,7 +427,33 @@ public class YouTubeClient {
         if (text.isEmpty()) {
             return;
         }
-        // TODO agian pls pld pls pl pl sp lp s do osomething
+        text = g.replaceEmojiCodes(text);
+        String channel = room.getChannel();
+        if (text.startsWith("//")) {
+            anonCustomCommand(room, text.substring(1), commandParameters);
+        }
+        else if (text.startsWith("/")) {
+            commandInput(room, text, commandParameters);
+        }
+        else {
+            if (c.onChannel(channel)) {
+                JSONArray segments = g.createTextSegments(text);
+                sendMessage(channel, text, true, segments);
+            }
+            else if (channel.startsWith("*")) {
+
+            }
+            else {
+                // For testing:
+                // (Also creates a channel with an empty string)
+                if (Chatty.DEBUG) {
+                    User user = c.getUser(room.getChannel(), "test", "test");
+                    g.printMessage(user,text,false);
+                } else {
+                    g.printLine("Not in a channel");
+                }
+            }
+        }
     }
 
     private void sendMessage(String channel, String text) {
@@ -432,7 +469,19 @@ public class YouTubeClient {
      * sending a message as well
      */
     private void sendMessage(String channel, String text, boolean allowCommandMessageLocally) {
-        // TODO 1244121253sdzvxvbxbbcn vmbn do SOMETHJING!
+        sendMessage(channel, text, allowCommandMessageLocally, null);
+    }
+
+    private void sendMessage(String channel, String text, boolean allowCommandMessageLocally, JSONArray segments) {
+        if (c.sendSpamProtectedMessage(channel, text, false, segments)) {
+            User user = c.localUserJoined(channel);
+            g.printMessage(user, text, false);
+            if (allowCommandMessageLocally) {
+                //modCommandAddStreamHighlight(user, text, MsgTags.EMPTY);
+            }
+        } else {
+            g.printLine("# Message not sent to prevent ban: " + text);
+        }
     }
 
     /**
@@ -453,6 +502,107 @@ public class YouTubeClient {
 
     public String getHostedChannel(String channel) {
         return c.getChannelState(channel).getHosting();
+    }
+
+    /**
+     * Execute a command from input, which means the text starts with a '/',
+     * followed by the command name and comma-separated arguments.
+     *
+     * Use {@link #commandInput(Room, String, Parameters)} to carry over extra
+     * parameters.
+     *
+     * @param room The room context
+     * @param text The raw text
+     * @return
+     */
+    public boolean commandInput(Room room, String text) {
+        return commandInput(room, text, null);
+    }
+
+    /**
+     * Execute a command from input, which means the text starts with a '/',
+     * followed by the command name and comma-separated arguments.
+     *
+     * @param room The room context
+     * @param text The raw text
+     * @param parameters The parameters to carry over (args will be overwritten)
+     * @return
+     */
+    public boolean commandInput(Room room, String text, Parameters parameters) {
+        String[] split = text.split(" ", 2);
+        String command = split[0].substring(1);
+        String args = null;
+        if (split.length == 2) {
+            args = split[1];
+        }
+
+        // Overwrite args in Parameters with current
+        if (parameters == null) {
+            parameters = Parameters.create(args);
+        } else {
+            parameters.putArgs(args);
+        }
+        return command(room, command, parameters);
+    }
+
+    /**
+     * Executes the command with the given name, which can be a built-in or
+     * Custom command, with no parameters.
+     *
+     * @param room The room context
+     * @param command The command name (no leading /)
+     * @return
+     */
+    public boolean command(Room room, String command) {
+        return command(room, command, Parameters.create(null));
+    }
+
+    /**
+     * Executes the command with the given name, which can be a built-in or
+     * Custom Command.
+     *
+     * @param room The room context
+     * @param command The command name (no leading /)
+     * @param parameter The parameter, can be null
+     * @return
+     */
+    public boolean command(Room room, String command, String parameter) {
+        return command(room, command, Parameters.create(parameter));
+    }
+
+    private void addCommands() {
+
+    }
+
+    /**
+     * Executes the command with the given name, which can be a built-in or
+     * Custom Command.
+     *
+     * @param room The room context
+     * @param command The command name (no leading /)
+     * @param parameters The parameters, can not be null
+     * @return
+     */
+    public boolean command(Room room, String command, Parameters parameters) {
+        String channel = room.getChannel();
+        // Args could be null
+        String parameter = parameters.getArgs();
+        command = StringUtil.toLowerCase(command);
+
+        if (commands.performCommand(command, room, parameters)) {
+            LOGGER.info("??");
+        }
+        else if (c.command(channel, command, parameter, null)) {
+            // Already done if true
+        }
+        else if (customCommands.containsCommand(command, room)) {
+
+        }
+        else {
+            g.printLine(Language.getString("chat.unknownCommand", command));
+            return false;
+        }
+        return false;
     }
 
     /**
@@ -570,9 +720,9 @@ public class YouTubeClient {
         @Override
         public void onUserUpdated(User user) {
             if (showUserInGui(user)) {
-                //g.updateUser(user);
+                g.updateUser(user);
             }
-            //g.updateUserinfo(user);
+            g.updateUserinfo(user);
             //checkModLogListen(user);
         }
 
@@ -583,6 +733,11 @@ public class YouTubeClient {
                 //addressbookCommands(user.getChannel(), user, text);
                 //modCommandAddStreamHighlight(user, text, tags);
             }
+        }
+
+        @Override
+        public void onChannelMessage(User user, String client_id, liveChatTextMessageRenderer messageRenderer) {
+            g.printMessage(user, client_id, messageRenderer);
         }
 
         @Override
@@ -606,6 +761,15 @@ public class YouTubeClient {
         }
 
         @Override
+        public void onJoin(User user) {
+            if (settings.getBoolean("showJoinsParts") && showUserInGui(user)) {
+                g.printCompact("JOIN", user);
+            }
+            g.userJoined(user);
+            chatLog.compact(user.getRoom().getFilename(), "JOIN", user.getRegularDisplayNick());
+        }
+
+        @Override
         public void onJoinAttempt(Room room) {
             /**
              * This should be the event where the channel is first opened, and
@@ -625,8 +789,9 @@ public class YouTubeClient {
         @Override
         public void onUserAdded(User user) {
             if (showUserInGui(user)) {
-                //g.addUser(user);
+                g.addUser(user);
             }
+            g.updateUserinfo(user);
         }
 
         private boolean showUserInGui(User user) {
@@ -671,6 +836,17 @@ public class YouTubeClient {
                 g.msgDeleted(user, targetMsgId, msg);
             }
             chatLog.msgDeleted(user, msg);
+        }
+
+        @Override
+        public void onMsgDeleted(User user, User.TextMessage message, String targetMsgId) {
+            User localUser = c.getLocalUser(user.getChannel());
+            if (localUser == user) {
+                g.printLine(user.getRoom(), "Your message was deleted: " + message.getText());
+            } else {
+                g.msgDeleted(user, targetMsgId, message.getText());
+            }
+            chatLog.msgDeleted(user, message.getText());
         }
 
         @Override
@@ -774,17 +950,53 @@ public class YouTubeClient {
 
         }
 
+        @Override
+        public void receivedUsericons(List<Usericon> icons) {
+            usericonManager.addDefaultIcons(icons);
+        }
+
+        @Override
+        public void receivedModerationData(ModerationData data) {
+            if(!data.created_by.isEmpty()) {
+                g.printModerationAction(data, false);
+                User modUser = c.getUserFromUsername(data.stream, data.created_by);
+                modUser.addModAction(data);
+                g.updateUserinfo(modUser);
+
+                if(ModLogInfo.isBanCommand(data)) {
+                    User bannedUser;
+                    if(data.channel_id != null) {
+                        bannedUser = c.getUser(data.stream, data.channel_id, data.username);
+                    } else {
+                        bannedUser = c.getUserFromUsername(data.stream, data.username);
+                    }
+                    if(bannedUser != null) {
+                        bannedUser.addBanInfo(data);
+                        g.updateUserinfo(bannedUser);
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void receivedUsername(String username) {
+            if(!c.getUsername().equalsIgnoreCase(username)) {
+                g.updateUsername(username);
+                c.setUsername(username);
+            }
+        }
+
+        @Override
+        public void receivedEmoticons(Set<Emoticon> emoticons) {
+            g.addEmoticons(emoticons);
+        }
+
     }
 
     /**
      * Redirects request results from the API.
      */
     private class YouTubeResults implements YouTubeApiResultListener {
-
-        @Override
-        public void receivedUsericons(List<Usericon> icons) {
-
-        }
 
         @Override
         public void cookiesVerified(String cookies, TokenInfo tokenInfo) {
@@ -798,7 +1010,7 @@ public class YouTubeClient {
 
         @Override
         public void accessDenied() {
-
+            web.checkToken();
         }
 
         @Override
@@ -821,6 +1033,36 @@ public class YouTubeClient {
 
         }
     }
+
+
+    private void anonCustomCommand(Room room, String text, Parameters parameters) {
+        CustomCommand command = CustomCommand.parse(text);
+        if (parameters == null) {
+            parameters = Parameters.create(null);
+        }
+        anonCustomCommand(room, command, parameters);
+    }
+
+    public void anonCustomCommand(Room room, CustomCommand command, Parameters parameters) {
+        if (command.hasError()) {
+            g.printLine("Parse error: "+command.getSingleLineError());
+            return;
+        }
+        if (room == null) {
+            g.printLine("Custom command: Not on a channel");
+            return;
+        }
+        String result = customCommands.command(command, parameters, room);
+        if (result == null) {
+            g.printLine("Custom command: Insufficient parameters/data");
+        } else if (result.isEmpty()) {
+            g.printLine("Custom command: No action specified");
+        } else {
+            textInput(room, result, parameters);
+        }
+    }
+
+
 
     /**
      * Exit the program. Do some cleanup first and save stuff to file (settings,
@@ -871,7 +1113,6 @@ public class YouTubeClient {
     public List<FileManager.SaveResult> manualBackup() {
         return settingsManager.fileManager.manualBackup();
     }
-
 
 
 }

@@ -3,6 +3,7 @@ package chatty;
 import chatty.gui.colors.UsercolorManager;
 import chatty.util.api.usericons.Usericon;
 import chatty.util.api.usericons.UsericonManager;
+import chatty.util.api.youtubeObjects.ModerationData;
 import chatty.util.colors.HtmlColors;
 import chatty.gui.NamedColor;
 import chatty.gui.components.textpane.ModLogInfo;
@@ -49,8 +50,6 @@ public class User implements Comparable<User> {
 
     private volatile String username;
 
-    private volatile String channel_id;
-
 
     /**
      * Custom nick, not from Twitch.
@@ -93,6 +92,7 @@ public class User implements Comparable<User> {
     private boolean isStaff;
     private boolean isSubscriber;
     private boolean isVip;
+    private boolean isVerified;
 
     //==========
     // Messages
@@ -110,7 +110,7 @@ public class User implements Comparable<User> {
     }
 
     public User(String channel_id, String username, Room room) {
-        this.channel_id = channel_id;
+        this.id = channel_id;
         this.username = username;
         this.room = room;
         //setDefaultColor();
@@ -199,7 +199,7 @@ public class User implements Comparable<User> {
      */
     public Set<String> getCategories() {
         if (addressbook != null) {
-            AddressbookEntry entry = addressbook.get(channel_id);
+            AddressbookEntry entry = addressbook.get(this.id);
             if (entry != null) {
                 return entry.getCategories();
             }
@@ -215,7 +215,7 @@ public class User implements Comparable<User> {
     }
 
     public boolean hasCategory(String category) {
-        return hasCategory(category, channel_id);
+        return hasCategory(category, this.id);
     }
 
     public boolean hasCategory(String category, String channel_id) {
@@ -337,14 +337,19 @@ public class User implements Comparable<User> {
         addLine(new ModAction(System.currentTimeMillis(), data.getCommandAndParameters()));
     }
 
-    private List<ModeratorActionData> cachedBanInfo;
+    public synchronized void addModAction(ModerationData data) {
+        addLine(new ModAction(System.currentTimeMillis(), data.getCommandAndParameters()));
+    }
+
+
+    private List<ModerationData> cachedBanInfo;
 
     /**
      * Add ban info (by/reason) for this user. Must be for this user.
      *
      * @param data
      */
-    public synchronized void addBanInfo(ModeratorActionData data) {
+    public synchronized void addBanInfo(ModerationData data) {
         if (!addBanInfoNow(data)) {
             // Adding failed, cache and wait to see if it works later
             Debugging.println("modlog", "[UserModLogInfo] Caching: %s", data.getCommandAndParameters());
@@ -355,6 +360,7 @@ public class User implements Comparable<User> {
         }
     }
 
+
     private static final int BAN_INFO_WAIT = 500;
 
     private synchronized void replayCachedBanInfo() {
@@ -362,9 +368,9 @@ public class User implements Comparable<User> {
             return;
         }
         Debugging.println("modlog", "[UserModLogInfo] Replaying: %s", cachedBanInfo);
-        Iterator<ModeratorActionData> it = cachedBanInfo.iterator();
+        Iterator<ModerationData> it = cachedBanInfo.iterator();
         while (it.hasNext()) {
-            ModeratorActionData data = it.next();
+            ModerationData data = it.next();
             if (System.currentTimeMillis() - data.created_at > BAN_INFO_WAIT) {
                 it.remove();
                 Debugging.println("modlog", "[UserModLogInfo] Abandoned: %s", data);
@@ -380,7 +386,7 @@ public class User implements Comparable<User> {
         }
     }
 
-    private synchronized boolean addBanInfoNow(ModeratorActionData data) {
+    private synchronized boolean addBanInfoNow(ModerationData data) {
         String command = ModLogInfo.makeCommand(data);
         for (int i=lines.size() - 1; i>=0; i--) {
             Message m = lines.get(i);
@@ -398,7 +404,7 @@ public class User implements Comparable<User> {
             if (m instanceof BanMessage) {
                 BanMessage bm = (BanMessage)m;
                 if (bm.by == null) {
-                    lines.set(i, bm.addModLogInfo(data.created_by, ModLogInfo.getReason(data)));
+                    lines.set(i, bm.addModLogInfo(data.timed_out_seconds, data.created_by, null));
                     return true;
                 }
             } else if (m instanceof MsgDeleted) {
@@ -720,7 +726,7 @@ public class User implements Comparable<User> {
             result = result + vip;
         }
         if (result == 0) {
-            return this.channel_id.compareTo(u.channel_id);
+            return this.id.compareTo(u.id);
         }
         return result;
     }
@@ -748,8 +754,13 @@ public class User implements Comparable<User> {
     }
 
     public synchronized boolean sameUser(User user) {
-        return user != null && user.getChannel().equals(getChannel()) && user.getName().equals(getName());
+        return user != null && user.getChannel().equals(getChannel()) && user.getId().equals(getId());
     }
+
+    public synchronized String getChannelID() {
+        return this.id;
+    }
+
 
     /**
      * Returns true if this user has channel moderator rights, which includes
@@ -841,6 +852,15 @@ public class User implements Comparable<User> {
             isSubscriber = subscriber;
             updateFullNick();
             return true;
+        }
+        return false;
+    }
+
+
+    public synchronized boolean setVerified(boolean verified) {
+        if (isVerified != verified) {
+            isVerified = verified;
+            updateFullNick();
         }
         return false;
     }
@@ -956,6 +976,14 @@ public class User implements Comparable<User> {
         }
 
         public BanMessage addModLogInfo(String by, String reason) {
+            if (reason == null) {
+                // Probably not set anyway, but just in case
+                reason = this.reason;
+            }
+            return new BanMessage(getTime(), duration, reason, id, by);
+        }
+
+        public BanMessage addModLogInfo(long duration, String by, String reason) {
             if (reason == null) {
                 // Probably not set anyway, but just in case
                 reason = this.reason;

@@ -102,16 +102,14 @@ public class JSONUtil {
         return o.toJSONString();
     }
 
-    public static JSONObject parseJSON(String json) {
+    public static Object parseJSON(String json) {
         JSONParser parser = new JSONParser();
-        JSONObject root = null;
         try {
-            root = (JSONObject)parser.parse(json);
+            return parser.parse(json);
         } catch (ParseException e) {
             e.printStackTrace();
             return null;
         }
-        return root;
     }
 
 

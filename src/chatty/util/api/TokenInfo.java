@@ -8,19 +8,19 @@ package chatty.util.api;
  */
 public class TokenInfo {
 
-    public final String name;
-    public final String userId;
+    public final String channel_name;
+    public final String channel_id;
     public final boolean valid;
     
     public TokenInfo() {
         valid = false;
-        name = null;
-        userId = null;
+        channel_name = null;
+        channel_id = null;
     }
     
-    public TokenInfo(String name, String userId) {
-        this.name = name;
-        this.userId = userId;
+    public TokenInfo(String channel_name, String channel_id) {
+        this.channel_name = channel_name;
+        this.channel_id = channel_id;
         valid = true;
     }
 }

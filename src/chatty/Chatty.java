@@ -5,6 +5,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,12 +28,6 @@ public class Chatty {
     public static final String WEBSITE =
             "https://chatty.github.io";
 
-    /**
-     * The Twitch client id of this program.
-     */
-    public static final String CLIENT_ID = "29917497871-9spoif4kpo9jd73meg5872e7us6vlceu.apps.googleusercontent.com";
-
-    public static final String CLIENT_SECRET = "y3Ws9E5zEvKTg0cpVc0BCMW_";
 
     /**
      * The redirect URI for getting a token.

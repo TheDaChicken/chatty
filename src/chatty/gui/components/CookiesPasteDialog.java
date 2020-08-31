@@ -69,7 +69,8 @@ public class CookiesPasteDialog extends JDialog implements ItemListener, ActionL
     public JButton getSaveButton() { return saveButton; }
 
     public String getJsonString() {
-        return jsonField.getText();
+        String text = jsonField.getText();
+        return text.trim();
     }
 
     public final void reset() {

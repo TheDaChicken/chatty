@@ -1,12 +1,19 @@
 package chatty;
 
 import chatty.gui.colors.UsercolorManager;
+import chatty.gui.components.textpane.InfoMessage;
 import chatty.util.StringUtil;
+import chatty.util.api.Emoticon;
 import chatty.util.api.Emoticons;
 import chatty.util.api.YouTubeWeb;
+import chatty.util.api.usericons.Usericon;
 import chatty.util.api.usericons.UsericonManager;
+import chatty.util.api.youtubeObjects.LiveChat.actions.Items.liveChatTextMessageRenderer;
+import chatty.util.api.youtubeObjects.ModerationData;
 import chatty.util.irc.MsgTags;
 import chatty.util.settings.Settings;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 
 import java.util.*;
 import java.util.logging.Logger;
@@ -33,9 +40,10 @@ public class YouTubeConnection {
     private final Set<String> openChannels = Collections.synchronizedSet(new HashSet<String>());
 
     /**
-     * The channel_id to send to the server. This is stored to reconnect.
+     * The channel_id / username to send to the server. This is stored to reconnect.
      */
     private volatile String channel_id;
+    private volatile String username;
 
     /**
      * Holds the UserManager instance, which manages all the user objects.
@@ -44,8 +52,9 @@ public class YouTubeConnection {
 
     private final RoomManager rooms;
 
-    private final YouTubeLiveChats liveChat;
+    private final YouTubeLiveChatClass liveChat;
 
+    private final YouTubeCommands ytCommands;
     private final SpamProtection spamProtection;
     private final ChannelStateManager channelStates = new ChannelStateManager();
 
@@ -53,9 +62,10 @@ public class YouTubeConnection {
 
     public YouTubeConnection(final ConnectionListener listener, Settings settings,
                              String label, RoomManager rooms, YouTubeWeb web) {
-        liveChat = new YouTubeLiveChatClass(label, web);
+        liveChat = new YouTubeLiveChatClass(label, web, settings.getString("userid"));
         this.listener = listener;
         this.settings = settings;
+        this.ytCommands = new YouTubeCommands(this);
         this.rooms = rooms;
         spamProtection = new SpamProtection();
         spamProtection.setLinesPerSeconds(settings.getString("spamProtection"));
@@ -103,12 +113,63 @@ public class YouTubeConnection {
         return users.getUser(rooms.getRoom(channel), channel_id, name);
     }
 
+    public User getUserFromUsername(String channel, String name) {
+        return users.getUserFromUsername(rooms.getRoom(channel), name);
+    }
+
     public User getExistingUser(String channel, String channel_id) {
         return users.getUserIfExists(channel, channel_id);
     }
 
     public User localUserJoined(String channel) {
-        return userJoined(channel, channel_id, null);
+        return userJoined(channel, channel_id, username);
+    }
+
+    public boolean sendSpamProtectedMessage(String channel, String message, boolean action) {
+        return sendSpamProtectedMessage(channel, message, action, MsgTags.EMPTY);
+    }
+
+    public boolean sendSpamProtectedMessage(String channel, String message, boolean action, JSONArray segments) {
+        return sendSpamProtectedMessage(channel, message, action, MsgTags.EMPTY, segments);
+    }
+
+    /**
+     * Tries to send a spam protected message, which will either be send or not,
+     * depending on the status of the spam protection.
+     *
+     * <p>This doesn't check if you're actually on the channel.</p>
+     *
+     * @param channel The channel to send the message to
+     * @param message The message to send
+     * @param action
+     * @return true if the message was send, false otherwise
+     */
+    public boolean sendSpamProtectedMessage(String channel, String message,
+                                            boolean action, MsgTags tags) {
+        return sendSpamProtectedMessage(channel, message, action, tags, null);
+    }
+
+    public boolean sendSpamProtectedMessage(String channel, String message,
+                                            boolean action, MsgTags tags, JSONArray segments) {
+        if (!spamProtection.check()) {
+            return false;
+        } else {
+            if (Helper.isChatroomChannel(channel)) {
+                sentMessages.messageSent(channel, message);
+            }
+            spamProtection.increase();
+            if (action) {
+                LOGGER.info("action message??");
+                //liveChat.sendActionMessage(channel, message);
+            } else {
+                if(segments == null) {
+                    liveChat.sendMessage(channel, message, tags);
+                } else {
+                    liveChat.sendMessage(channel, segments, tags);
+                }
+            }
+            return true;
+        }
     }
 
     public User getLocalUser(String channel) {
@@ -122,6 +183,57 @@ public class YouTubeConnection {
      */
     public String getChannelID() {
         return channel_id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public boolean command(String channel, String command, String parameters,
+                           String msgId) {
+        return ytCommands.command(channel, msgId, command, parameters);
+    }
+
+    public void sendCommandMessage(String channel, String message, String echo) {
+        sendCommandMessage(channel, message, echo, MsgTags.EMPTY);
+    }
+
+    /**
+     * Send a spam protected command to a channel, with the given echo message
+     * that will be displayed to the user.
+     *
+     * This doesn't check if you're actually on the channel.
+     *
+     * @param channel The channel to send the message to
+     * @param message The message to send (e.g. a moderation command)
+     * @param echo The message to display to the user
+     * @param tags
+     */
+    public void sendCommandMessage(String channel, String message, String echo,
+                                   MsgTags tags) {
+        info(channel, "# Command not sent to prevent stupidity: " + message, null);
+    }
+
+    public void timeout(String channel, String msgId, String name, String time, String timeLabel, String reason, String echo) {
+        if(liveChat.timeout(channel, msgId, name, time, reason)) {
+            info(channel, echo, null);
+        }
+    }
+
+    public void ban(String channel, String channel_id, String echo) {
+        if(liveChat.ban(channel, channel_id)) {
+            info(channel, echo, null);
+        }
+    }
+
+    public void unban(String channel, String channel_id, String echo) {
+        if(liveChat.unban(channel, channel_id)) {
+            info(channel, echo, null);
+        }
     }
 
     public Set<String> getOpenChannels() {
@@ -157,6 +269,18 @@ public class YouTubeConnection {
         return onChannel(channel, false);
     }
 
+    public boolean onOwnerChannel(String ownerChannel) {
+        if (liveChat.joinedChannels.contains(ownerChannel)) {
+            return true;
+        }
+        for (Room room : rooms.getRoomsByOwner(ownerChannel)) {
+            if (liveChat.joinedChannels.contains(room.getChannel())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean isChannelOpen(String channel) {
         return openChannels.contains(channel);
     }
@@ -186,7 +310,7 @@ public class YouTubeConnection {
      * @return
      */
     public boolean onChannel(String channel, boolean showMessage) {
-        boolean onChannel = false;
+        boolean onChannel = liveChat.joinedChannels.contains(channel);;
         if (showMessage && !onChannel) {
             if (channel == null || channel.isEmpty()) {
                 listener.onInfo("Not in a channel");
@@ -211,8 +335,9 @@ public class YouTubeConnection {
      * @param password The password
      * @param autojoin The channels to join after connecting
      */
-    public void autoJoinChannels(String channel_id, String[] autojoin) {
+    public void autoJoinChannels(String channel_id, String username, String[] autojoin) {
         this.channel_id = channel_id;
+        this.username = username;
         this.autojoin = autojoin;
         users.setLocalChannelID(channel_id);
         start();
@@ -342,8 +467,8 @@ public class YouTubeConnection {
         private Set<String> userlistReceived = Collections.synchronizedSet(
                 new HashSet<String>());
 
-        public YouTubeLiveChatClass(String id, YouTubeWeb web) {
-            super(id, web);
+        public YouTubeLiveChatClass(String id, YouTubeWeb web, String user_channel_id) {
+            super(id, web, user_channel_id);
             this.idPrefix= "["+id+"] ";
         }
 
@@ -395,14 +520,36 @@ public class YouTubeConnection {
         }
 
         @Override
-        void onJoin(String channel, String channel_id_, String username) {
-            if (channel_id.equalsIgnoreCase(channel_id_))
+        void onJoin(String channel, String user_id, String username) {
+            if (channel_id.equalsIgnoreCase(user_id)) {
                 debug("JOINED: " + channel);
-            User user = userJoined(channel, channel_id_, username);
-            if (this == liveChat && !onChannel(channel)) {
-                listener.onChannelJoined(user);
+                User user = userJoined(channel, user_id, username);
+                if (this == liveChat && !onChannel(channel)) {
+                    listener.onChannelJoined(user);
+                }
+                joinedChannels.add(channel);
+            } else {
+                /*
+                 * Another user has joined a channel we are currently in.
+                 */
+                if (isChannelOpen(channel)) {
+                    LOGGER.info("onChannel");
+                    if (!userlistReceived.contains(channel)) {
+                        clearUserlist(channel);
+                        // Add local user again, must be on this channel but
+                        // may not be in the batch of joins again
+                        localUserJoined(channel);
+                    }
+                    User user = userJoined(channel, user_id, username);
+                    listener.onJoin(user);
+                    userlistReceived.add(channel);
+                }
             }
-            joinedChannels.add(channel);
+        }
+
+        @Override
+        public void addUsericons(List<Usericon> icons) {
+            listener.receivedUsericons(icons);
         }
 
         private void clearUserlist(String channel) {
@@ -426,7 +573,7 @@ public class YouTubeConnection {
             // Whether anything in the user changed to warrant an update
             boolean changed = false;
 
-            Map<String, String> badges = Helper.parseBadges(tags.get("badges"));
+            Map<String, String> badges = Helper.parseBadgesJson(tags.get("badges"));
             if (user.setBadges(badges)) {
                 changed = true;
             }
@@ -449,7 +596,7 @@ public class YouTubeConnection {
             if (user.setModerator(badges.containsKey("moderator"))) {
                 changed = true;
             }
-            if (user.setStaff(badges.containsKey("staff"))) {
+            if (user.setVerified(badges.containsKey("verified"))) {
                 changed = true;
             }
 
@@ -469,7 +616,7 @@ public class YouTubeConnection {
 //                changed = true;
 //            }
 
-            user.setId(tags.get("user-id"));
+            //user.setId(tags.get("user-id"));
 
             if (changed && user != users.specialUser) {
                 listener.onUserUpdated(user);
@@ -477,18 +624,17 @@ public class YouTubeConnection {
         }
 
         @Override
-        void onChannelMessage(String channel, String channel_id, String nick, String text,
-                              MsgTags tags, boolean action) {
-            if (this != liveChat) {
-                return;
-            }
-            if (nick.isEmpty()) {
-                return;
+        void onChannelMessage(String channel, String client_id, liveChatTextMessageRenderer messageRenderer) {
+            if(messageRenderer.getAction().getClientId() != null) {
+                if (messageRenderer.getAction().getClientId().contains(client_id)) {
+                    LOGGER.info("Own message ignored.");
+                    return;
+                }
             }
             if (onChannel(channel)) {
-                User user = userJoined(channel, channel_id, nick);
-                updateUserFromTags(user, tags);
-                listener.onChannelMessage(user, text, action, tags);
+                User user = userJoined(channel, messageRenderer.getAuthorChannelId(), messageRenderer.getAuthorName());
+                updateUserFromTags(user, messageRenderer.parse());
+                listener.onChannelMessage(user, client_id, messageRenderer);
             }
         }
 
@@ -553,6 +699,10 @@ public class YouTubeConnection {
         @Override
         void onUsernotice(String channel, String message, MsgTags tags) {
 
+        }
+
+        private void channelCleared(String channel) {
+            listener.onChannelCleared(rooms.getRoom(channel));
         }
 
         @Override
@@ -628,16 +778,63 @@ public class YouTubeConnection {
         }
 
         @Override
-        public void onClearMsg(MsgTags tags, String channel, String msg) {
-            String login = tags.get("login");
-            String targetMsgId = tags.get("target-msg-id");
-            if (!StringUtil.isNullOrEmpty(login, targetMsgId)) {
-                User user = users.getUserIfExists(channel, login);
+        public void onClearChat(MsgTags tags, String channel,
+                                String channel_id) {
+            if (channel_id != null) {
+                // A single user was timed out/banned
+                User user = users.getUserIfExists(channel, channel_id);
                 if (user != null) {
-                    listener.onMsgDeleted(user, targetMsgId, msg);
+                    long duration = tags.getLong("ban-duration", -3);
+                    String reason = tags.get("ban-reason", "");
+                    String targetMsgId = tags.get("target-msg-id", null);
+                    if (isChannelOpen(user.getChannel())) {
+                        listener.onBan(user, duration, reason, targetMsgId);
+                    }
+                }
+            } else {
+                // No nick specified means the channel is cleared
+                channelCleared(channel);
+            }
+        }
+
+        @Override
+        public void onClearMsg(MsgTags tags, String channel, ModerationData data) {
+            //String login = tags.get("login");
+            String targetMsgId = tags.get("target-msg-id");
+            if (!StringUtil.isNullOrEmpty(targetMsgId)) {
+                for(User user : users.getUsersByChannel(channel).values()) {
+                    // YouTube doesn't give it out what user to delete a message from
+                    // Me, who is used to coding in Python now, this triggers me.
+                    // For loops takes up performance.
+                    User.TextMessage message = user.getMessage(targetMsgId);
+                    if (message != null) {
+                        listener.onMsgDeleted(user, message, targetMsgId);
+                        if(data != null) {
+                            data.channel_id = user.getChannelID();
+                            listener.receivedModerationData(data);
+                        }
+                    }
                 }
             }
         }
+
+        @Override
+        public void receivedModerationData(ModerationData data) {
+            listener.receivedModerationData(data);
+        }
+
+        @Override
+        public void receivedUsername(String username) {
+            if(username != null) {
+                listener.receivedUsername(username);
+            }
+        }
+
+        @Override
+        public void receivedEmoticons(Set<Emoticon> emoticons) {
+            listener.receivedEmoticons(emoticons);
+        }
+
     }
 
     /**
@@ -655,7 +852,7 @@ public class YouTubeConnection {
 
     public User userJoined(User user) {
         if (user.setOnline(true)) {
-            if (user.getName().equals(user.getStream())) {
+            if (user.getChannel().equals(user.getStream())) {
                 user.setBroadcaster(true);
             }
             listener.onUserAdded(user);
@@ -693,7 +890,11 @@ public class YouTubeConnection {
 
         void onChannelMessage(User user, String msg, boolean action, MsgTags tags);
 
+        void onChannelMessage(User user, String client_id, liveChatTextMessageRenderer messageRenderer);
+
         void onNotice(String message);
+
+        void onJoin(User user);
 
         /**
          * An info message to a specific channel, usually intended to be
@@ -722,6 +923,8 @@ public class YouTubeConnection {
         void onBan(User user, long length, String reason, String targetMsgId);
 
         void onMsgDeleted(User user, String targetMsgId, String msg);
+
+        void onMsgDeleted(User user, User.TextMessage message, String targetMsgId);
 
         void onRegistered();
 
@@ -765,6 +968,14 @@ public class YouTubeConnection {
         void onSpecialMessage(String name, String message);
 
         void onRoomId(String channel, String id);
+
+        void receivedUsericons(List<Usericon> icons);
+
+        void receivedModerationData(ModerationData data);
+
+        void receivedUsername(String username);
+
+        void receivedEmoticons(Set<Emoticon> emoticons);
     }
 
     /**

@@ -1,7 +1,10 @@
 
 package chatty.gui.components.menus;
 
+import chatty.util.commands.Command;
 import chatty.util.commands.CustomCommand;
+import chatty.util.commands.TimeoutCommand;
+
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -21,7 +24,7 @@ public class CommandMenuItem {
     private final String key;
     
     public CommandMenuItem(String label, CustomCommand command, String parent,
-            int pos, String key) {
+                           int pos, String key) {
         this.label = label;
         this.command = command;
         this.parent = parent;
@@ -36,6 +39,11 @@ public class CommandMenuItem {
     public CustomCommand getCommand() {
         return command;
     }
+
+    public CustomCommand getCustomCommand() {
+        return (CustomCommand) this.command;
+    }
+
     
     public String getParent() {
         return parent;
